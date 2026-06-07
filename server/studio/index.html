@@ -476,11 +476,26 @@ const StudioUI = {
       this.elements[id] = document.getElementById(id);
     });
 
+    // Check if mediaDevices API is available.
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      this.setStatus('error',
+        'This browser does not support camera access. Use Chrome or Firefox.');
+      this.elements['camera-select'].innerHTML =
+        '<option>Unavailable</option>';
+      this.elements['mic-select'].innerHTML =
+        '<option>Unavailable</option>';
+      return;
+    }
+
     // Populate device lists, then enable the Go Live button.
     this.populateDevices().then(() => {
       this.setStatus('idle', 'Ready');
       this.elements['go-live-btn'].disabled = false;
       this.elements['go-live-btn'].textContent = 'Go Live';
+    }).catch((err) => {
+      console.error('[studio] device init failed:', err);
+      this.setStatus('error',
+        'Failed to detect devices. Check browser permissions.');
     });
 
     // Listen for device changes (e.g. unplugging a webcam).
@@ -507,25 +522,45 @@ const StudioUI = {
   },
 
   // Enumerate cameras and microphones, populate select elements.
+  // On HTTP (non-localhost), getUserMedia is blocked by the browser.
+  // We handle this gracefully — devices are listed without labels.
   async populateDevices() {
-    try {
-      // Request permission so we get device labels.
-      const tempStream = await navigator.mediaDevices.getUserMedia({
-        video: true, audio: true
-      });
-      // Stop temp stream immediately — we only needed labels.
-      tempStream.getTracks().forEach(t => t.stop());
-    } catch (err) {
-      // User denied — we will still list devices but labels may be blank.
+    const isLocalhost =
+      location.hostname === 'localhost' ||
+      location.hostname === '127.0.0.1' ||
+      location.hostname === '[::1]';
+
+    // Only call getUserMedia on HTTPS or localhost.
+    // On HTTP origins, skip to enumerateDevices (labels will be generic).
+    if (location.protocol === 'https:' || isLocalhost) {
+      try {
+        const tempStream = await navigator.mediaDevices.getUserMedia({
+          video: true, audio: true
+        });
+        tempStream.getTracks().forEach(t => t.stop());
+      } catch (err) {
+        console.warn('[studio] getUserMedia for labels failed:', err.name);
+      }
     }
 
-    const devices = await navigator.mediaDevices.enumerateDevices();
+    let devices;
+    try {
+      devices = await navigator.mediaDevices.enumerateDevices();
+    } catch (err) {
+      console.error('[studio] enumerateDevices failed:', err);
+      throw err;
+    }
 
     const cameras = devices.filter(d => d.kind === 'videoinput');
     const mics = devices.filter(d => d.kind === 'audioinput');
 
     this.populateSelect('camera-select', cameras, 'No camera found');
     this.populateSelect('mic-select', mics, 'No microphone found');
+
+    console.log(
+      '[studio] devices:', cameras.length, 'cameras,',
+      mics.length, 'microphones'
+    );
   },
 
   populateSelect(id, devices, emptyMessage) {
@@ -580,7 +615,26 @@ const StudioUI = {
         this.startAudioMeter(this._previewStream);
       }
     } catch (err) {
-      this.showError('Camera or mic not available. Check permissions.');
+      console.error('[studio] preview failed:', err.name, err.message);
+
+      if (err.name === 'NotAllowedError') {
+        this.showError(
+          'Camera permission denied. Check browser settings and allow camera access.'
+        );
+      } else if (err.name === 'NotFoundError') {
+        this.showError(
+          'No camera or microphone found. Connect a device and refresh.'
+        );
+      } else if (err.name === 'NotReadableError') {
+        this.showError(
+          'Camera is in use by another application. Close other apps and try again.'
+        );
+      } else {
+        this.showError(
+          'Camera error: ' + err.message +
+          '. Note: camera access requires HTTPS or localhost.'
+        );
+      }
     }
   },
 
