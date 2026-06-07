@@ -7,9 +7,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 
+	"github.com/pion/ice/v4"
 	"github.com/pion/webrtc/v4"
 	"github.com/rs/zerolog"
 )
@@ -24,6 +26,10 @@ type Session struct {
 
 	mu sync.Mutex
 
+	// udpMux is the shared ICE UDP mux that allows all peer
+	// connections to share a single UDP port.
+	udpMux ice.UDPMux
+
 	// publisherPC is the WebRTC PeerConnection for the active
 	// WHIP publisher. nil when no publisher is connected.
 	publisherPC *webrtc.PeerConnection
@@ -37,11 +43,27 @@ type Session struct {
 }
 
 // NewSession creates a new streaming session with the given
-// configuration and logger.
+// configuration and logger. It sets up a shared ICE UDP mux
+// on the configured port so all WebRTC connections share a
+// single UDP socket.
 func NewSession(cfg Config, logger zerolog.Logger) *Session {
+	udpListener, err := net.ListenUDP("udp", &net.UDPAddr{
+		IP:   net.IPv4zero,
+		Port: cfg.UDPMuxPort,
+	})
+	if err != nil {
+		logger.Fatal().Err(err).Int("port", cfg.UDPMuxPort).
+			Msg("failed to create UDP listener")
+	}
+
+	udpMux := webrtc.NewICEUDPMux(nil, udpListener)
+
+	logger.Info().Int("port", cfg.UDPMuxPort).Msg("ICE UDP mux started")
+
 	return &Session{
 		config:          cfg,
 		logger:          logger,
+		udpMux:          udpMux,
 		publisherTracks: make(map[string]*webrtc.TrackRemote),
 	}
 }
@@ -188,4 +210,21 @@ var viewerIDCounter int
 func generateViewerID() string {
 	viewerIDCounter++
 	return fmt.Sprintf("viewer-%d", viewerIDCounter)
+}
+
+// newAPI creates a configured WebRTC API with the shared ICE UDP
+// mux and NAT 1:1 IP mapping. This is used by both WHIP and WHEP
+// handlers so all peer connections share one UDP socket.
+func (s *Session) newAPI() *webrtc.API {
+	settingEngine := webrtc.SettingEngine{}
+	settingEngine.SetICEUDPMux(s.udpMux)
+
+	if s.config.PublicIP != "" {
+		settingEngine.SetNAT1To1IPs(
+			[]string{s.config.PublicIP},
+			webrtc.ICECandidateTypeHost,
+		)
+	}
+
+	return webrtc.NewAPI(webrtc.WithSettingEngine(settingEngine))
 }

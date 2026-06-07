@@ -81,7 +81,7 @@ indicating the stream is live. The pion-stream viewer page at
 2. **Check firewall ports:**
    ```bash
    sudo ufw status
-   # Should show: 80/tcp ALLOW, 3000:4000/udp ALLOW
+   # Should show: 80/tcp ALLOW, 3000/udp ALLOW
    ```
 
 3. **Check server logs:**

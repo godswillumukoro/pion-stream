@@ -62,28 +62,13 @@ func (s *Session) HandleWHIP(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mu.Unlock()
 
-	// Build ICE server configuration.
-	iceServers := []webrtc.ICEServer{
-		{URLs: []string{s.config.STUNServer}},
-	}
-
-	// Create the WebRTC API with a configurable UDP port range.
-	settingEngine := webrtc.SettingEngine{}
-	if s.config.PublicIP != "" {
-		settingEngine.SetNAT1To1IPs([]string{s.config.PublicIP}, webrtc.ICECandidateTypeHost)
-	}
-	if s.config.UDPPortMin > 0 && s.config.UDPPortMax > 0 {
-		if err := settingEngine.SetEphemeralUDPPortRange(
-			uint16(s.config.UDPPortMin), uint16(s.config.UDPPortMax),
-		); err != nil {
-			s.logger.Warn().Err(err).Msg("whip: failed to set UDP port range")
-		}
-	}
-
-	api := webrtc.NewAPI(webrtc.WithSettingEngine(settingEngine))
+	// Create the WebRTC API with the shared ICE UDP mux.
+	api := s.newAPI()
 
 	peerConnection, err := api.NewPeerConnection(webrtc.Configuration{
-		ICEServers: iceServers,
+		ICEServers: []webrtc.ICEServer{
+			{URLs: []string{s.config.STUNServer}},
+		},
 	})
 	if err != nil {
 		http.Error(w, "failed to create peer connection", http.StatusInternalServerError)

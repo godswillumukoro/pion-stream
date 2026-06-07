@@ -99,7 +99,7 @@ configure_firewall() {
 
     echo "[…] Configuring firewall ..."
     ufw allow 80/tcp comment 'pion-stream HTTP' || true
-    ufw allow 3000:4000/udp comment 'pion-stream WebRTC media' || true
+    ufw allow 3000/udp comment 'pion-stream WebRTC media' || true
     ufw --force enable || true
     echo "[✓] Firewall configured"
 }

@@ -99,8 +99,7 @@ All settings via environment variables (see `.env.example`):
 | Variable | Default | Description |
 |---|---|---|
 | `PORT` | `80` | HTTP server port |
-| `UDP_PORT_MIN` | `3000` | ICE UDP port range start |
-| `UDP_PORT_MAX` | `4000` | ICE UDP port range end |
+| `UDP_MUX_PORT` | `3000` | ICE UDP mux port (single port) |
 | `PUBLIC_IP` | (auto) | VPS public IP for ICE candidates |
 | `STUN_SERVER` | `stun:stun.l.google.com:19302` | STUN server URL |
 | `STREAM_KEY` | (none) | Bearer token for WHIP auth |

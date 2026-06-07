@@ -55,26 +55,12 @@ func (s *Session) HandleWHEP(w http.ResponseWriter, r *http.Request) {
 		Msg("whep: received viewer offer")
 
 	// Use the same ICE configuration as the publisher for consistency.
-	settingEngine := webrtc.SettingEngine{}
-	if s.config.PublicIP != "" {
-		settingEngine.SetNAT1To1IPs([]string{s.config.PublicIP}, webrtc.ICECandidateTypeHost)
-	}
-	if s.config.UDPPortMin > 0 && s.config.UDPPortMax > 0 {
-		if err := settingEngine.SetEphemeralUDPPortRange(
-			uint16(s.config.UDPPortMin), uint16(s.config.UDPPortMax),
-		); err != nil {
-			s.logger.Warn().Err(err).Msg("whep: failed to set UDP port range")
-		}
-	}
-
-	api := webrtc.NewAPI(webrtc.WithSettingEngine(settingEngine))
-
-	iceServers := []webrtc.ICEServer{
-		{URLs: []string{s.config.STUNServer}},
-	}
+	api := s.newAPI()
 
 	viewerPC, err := api.NewPeerConnection(webrtc.Configuration{
-		ICEServers: iceServers,
+		ICEServers: []webrtc.ICEServer{
+			{URLs: []string{s.config.STUNServer}},
+		},
 	})
 	if err != nil {
 		http.Error(w, "failed to create peer connection", http.StatusInternalServerError)

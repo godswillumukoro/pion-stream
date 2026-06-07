@@ -12,14 +12,12 @@ import (
 // Config holds all runtime configuration for the streaming server.
 // Values are loaded from environment variables with sensible defaults.
 type Config struct {
-	// Port is the HTTP server listen port (default: 8080).
+	// Port is the HTTP server listen port (default: 80).
 	Port int
 
-	// UDPPortMin is the start of the ICE UDP candidate port range.
-	UDPPortMin int
-
-	// UDPPortMax is the end of the ICE UDP candidate port range.
-	UDPPortMax int
+	// UDPMuxPort is the single UDP port used for all ICE connections.
+	// Pion's ICE mux allows multiple peer connections to share one port.
+	UDPMuxPort int
 
 	// PublicIP is the server's public IP, used for ICE host candidates.
 	// Leave empty if the server has a public interface directly.
@@ -37,8 +35,7 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		Port:       80,
-		UDPPortMin: 3000,
-		UDPPortMax: 4000,
+		UDPMuxPort: 3000,
 		PublicIP:   "",
 		STUNServer: "stun:stun.l.google.com:19302",
 		StreamKey:  "",
@@ -56,15 +53,9 @@ func LoadConfig() Config {
 		}
 	}
 
-	if v := os.Getenv("UDP_PORT_MIN"); v != "" {
+	if v := os.Getenv("UDP_MUX_PORT"); v != "" {
 		if p, err := strconv.Atoi(v); err == nil {
-			cfg.UDPPortMin = p
-		}
-	}
-
-	if v := os.Getenv("UDP_PORT_MAX"); v != "" {
-		if p, err := strconv.Atoi(v); err == nil {
-			cfg.UDPPortMax = p
+			cfg.UDPMuxPort = p
 		}
 	}
 
