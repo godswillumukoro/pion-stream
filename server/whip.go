@@ -188,9 +188,23 @@ func (s *Session) HandleWHIPBrowser(w http.ResponseWriter, r *http.Request) {
 	s.handleWHIPInternal(w, r, "browser")
 }
 
-// HandleWHIPDisconnect handles a publisher disconnect request.
-// The WHIP client sends DELETE to the resource URL to end the session.
+// HandleWHIPDisconnect handles a publisher disconnect request
+// from the OBS WHIP endpoint.
+// DELETE /api/whip
 func (s *Session) HandleWHIPDisconnect(w http.ResponseWriter, r *http.Request) {
+	s.handleWHIPDelete(w)
+}
+
+// HandleWHIPDelete handles a publisher disconnect request
+// from the browser WHIP endpoint.
+// DELETE /api/whip/browser
+func (s *Session) HandleWHIPDelete(w http.ResponseWriter, r *http.Request) {
+	s.handleWHIPDelete(w)
+}
+
+// handleWHIPDelete cleans up the current publisher regardless of
+// which WHIP endpoint was used.
+func (s *Session) handleWHIPDelete(w http.ResponseWriter) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

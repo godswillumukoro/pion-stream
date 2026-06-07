@@ -47,6 +47,7 @@ func main() {
 	// WHIP ingest for browser publishers — separate route for
 	// clarity in educational content.
 	router.Post("/api/whip/browser", session.HandleWHIPBrowser)
+	router.Delete("/api/whip/browser", session.HandleWHIPDelete)
 
 	// WHEP egress endpoint — browser-based viewers request the
 	// stream by POSTing their SDP offer.
