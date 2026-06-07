@@ -477,13 +477,42 @@ const StudioUI = {
     });
 
     // Check if mediaDevices API is available.
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    if (!navigator.mediaDevices) {
       this.setStatus('error',
         'This browser does not support camera access. Use Chrome or Firefox.');
       this.elements['camera-select'].innerHTML =
         '<option>Unavailable</option>';
       this.elements['mic-select'].innerHTML =
         '<option>Unavailable</option>';
+      return;
+    }
+
+    // Chrome blocks getUserMedia on HTTP (non-localhost).
+    // Show clear instructions for the SSH tunnel workaround.
+    const isLocalhost =
+      location.hostname === 'localhost' ||
+      location.hostname === '127.0.0.1' ||
+      location.hostname === '[::1]';
+
+    if (location.protocol === 'http:' && !isLocalhost) {
+      this.elements['no-preview'].innerHTML =
+        '<span class="icon">&#9888;</span>' +
+        '<span class="label">Camera Requires Localhost</span>' +
+        '<span class="sub" style="max-width:420px;line-height:1.6">' +
+        'Chrome blocks camera access on non-localhost HTTP.' +
+        '<br><br>' +
+        '<code style="background:#1a1a1a;padding:8px 12px;display:inline-block;' +
+        'color:#2dd4bf;font-size:11px;margin-top:8px">' +
+        'ssh -L 8080:localhost:80 stream</code>' +
+        '<br><br>Run that in your terminal, then open' +
+        '<br><code style="color:#f5a623">http://localhost:8080/studio</code>' +
+        '</span>';
+      this.setStatus('idle',
+        'Camera blocked on HTTP — use SSH tunnel to localhost');
+      this.elements['camera-select'].innerHTML =
+        '<option>Use localhost (see above)</option>';
+      this.elements['mic-select'].innerHTML =
+        '<option>Use localhost (see above)</option>';
       return;
     }
 
