@@ -141,6 +141,15 @@ func fmtViewerCount(n int) string {
 	return fmt.Sprintf("%d viewers", n)
 }
 
+// HandleSite serves the companion landing page — a standalone
+// documentation site for the project.
+func (s *Session) HandleSite(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if _, err := w.Write(siteTemplate); err != nil {
+		s.logger.Error().Err(err).Msg("failed to write site template")
+	}
+}
+
 // HandleViewer serves the HTMX-powered viewer UI at the root path.
 // The HTML template is embedded in the binary via go:embed.
 func (s *Session) HandleViewer(w http.ResponseWriter, r *http.Request) {

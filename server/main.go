@@ -58,6 +58,9 @@ func main() {
 	// state and viewer count.
 	router.Get("/status", session.HandleStatus)
 
+	// Companion landing page — standalone documentation site.
+	router.Get("/site", session.HandleSite)
+
 	// Viewer UI served at root with embedded HTML template.
 	router.Get("/", session.HandleViewer)
 

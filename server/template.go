@@ -1,5 +1,5 @@
 // Command pion-stream — template.go embeds the HTMX viewer UI
-// template into the binary at compile time.
+// template and companion landing page into the binary at compile time.
 package main
 
 import _ "embed"
@@ -9,3 +9,9 @@ import _ "embed"
 //
 //go:embed templates/index.html
 var viewerTemplate []byte
+
+// siteTemplate contains the companion landing page — a standalone
+// documentation site for the project.
+//
+//go:embed static/site.html
+var siteTemplate []byte
