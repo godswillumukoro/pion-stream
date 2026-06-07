@@ -3,134 +3,150 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>pion-stream — Live Viewer</title>
+  <title>pion-stream — LIVE VIEWER</title>
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@700;900&display=swap" rel="stylesheet">
   <style>
-    * {
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --border: #252525;
+      --accent: #4af626;
+      --accent-dim: rgba(74, 246, 38, 0.08);
+      --red: #ff2a2a;
+      --red-dim: rgba(255, 42, 42, 0.12);
+      --text: #eaeaea;
+      --text-dim: #6b6b6b;
+      --font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', monospace;
+      --font-display: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    *, *::before, *::after {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
 
-    :root {
-      --bg: #0d0d0d;
-      --surface: #1a1a1a;
-      --border: #2a2a2a;
-      --accent: #00ff88;
-      --accent-dim: rgba(0, 255, 136, 0.15);
-      --red: #ff3344;
-      --text: #e0e0e0;
-      --text-dim: #888;
-      --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    }
-
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: var(--font-sans);
-      min-height: 100vh;
+      font-family: var(--font-mono);
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
       align-items: center;
+      /* CRT scanline overlay */
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.03) 2px,
+          rgba(0, 0, 0, 0.03) 4px
+        );
     }
 
-    /* --- Header --- */
-    header {
+    /* --- Frame --- */
+    .frame {
       width: 100%;
-      max-width: 960px;
-      padding: 32px 24px 0;
+      max-width: 1024px;
+      min-height: 100dvh;
+      padding: 32px 24px 48px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* --- Header Bar --- */
+    .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
     }
 
-    .logo {
-      font-family: var(--font-mono);
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--text);
+    .brand {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 20px;
       letter-spacing: -0.5px;
+      text-transform: uppercase;
+      color: var(--text);
     }
 
-    .logo span {
+    .brand-accent {
       color: var(--accent);
     }
 
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
     /* --- Status Badge --- */
-    .status-badge {
+    .badge {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-family: var(--font-mono);
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
       padding: 6px 14px;
-      border-radius: 20px;
       border: 1px solid var(--border);
       background: var(--surface);
     }
 
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
+    .badge-dot {
+      width: 6px;
+      height: 6px;
       background: var(--text-dim);
     }
 
-    .status-dot.live {
+    #status-badge.live .badge-dot {
       background: var(--red);
-      box-shadow: 0 0 8px var(--red);
+      box-shadow: 0 0 6px var(--red);
       animation: pulse 2s ease-in-out infinite;
     }
 
     @keyframes pulse {
       0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
+      50% { opacity: 0.3; }
     }
 
-    .status-badge.live {
-      border-color: rgba(255, 51, 68, 0.3);
+    #status-badge.live {
+      border-color: rgba(255, 42, 42, 0.4);
     }
 
-    .status-label {
+    .badge-label.offline { color: var(--text-dim); }
+    .badge-label.live { color: var(--red); }
+
+    /* --- Viewers --- */
+    .viewers {
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .status-label.offline {
-      color: var(--text-dim);
-    }
-
-    .status-label.live {
-      color: var(--red);
-    }
-
-    /* --- Viewer Count --- */
-    .viewer-count {
-      font-family: var(--font-mono);
-      font-size: 13px;
-      color: var(--text-dim);
       padding: 6px 14px;
-      border-radius: 20px;
       border: 1px solid var(--border);
       background: var(--surface);
     }
 
-    /* --- Video Container --- */
-    .video-container {
-      width: 100%;
-      max-width: 960px;
-      margin-top: 24px;
-      padding: 0 24px;
-      aspect-ratio: 16 / 9;
+    /* --- Video Stage --- */
+    .stage {
+      flex: 1;
+      margin-top: 1px;
       background: var(--surface);
-      border-radius: 12px;
       border: 1px solid var(--border);
-      overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
+      position: relative;
+      overflow: hidden;
+      min-height: 400px;
     }
 
     video {
@@ -144,69 +160,253 @@
       display: block;
     }
 
-    .offline-placeholder {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-      color: var(--text-dim);
-      font-family: var(--font-mono);
-      font-size: 15px;
+    /* Crosshair corners on video stage */
+    .stage::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      background:
+        linear-gradient(to right, var(--border) 1px, transparent 1px) 0 0 / 32px 1px no-repeat,
+        linear-gradient(to bottom, var(--border) 1px, transparent 1px) 0 0 / 1px 32px no-repeat,
+        linear-gradient(to left, var(--border) 1px, transparent 1px) 100% 0 / 32px 1px no-repeat,
+        linear-gradient(to bottom, var(--border) 1px, transparent 1px) 100% 0 / 1px 32px no-repeat,
+        linear-gradient(to right, var(--border) 1px, transparent 1px) 0 100% / 32px 1px no-repeat,
+        linear-gradient(to top, var(--border) 1px, transparent 1px) 0 100% / 1px 32px no-repeat,
+        linear-gradient(to left, var(--border) 1px, transparent 1px) 100% 100% / 32px 1px no-repeat,
+        linear-gradient(to top, var(--border) 1px, transparent 1px) 100% 100% / 1px 32px no-repeat;
     }
 
-    .offline-placeholder .icon {
-      font-size: 48px;
-      opacity: 0.3;
+    .offline-msg {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+      padding: 48px;
+    }
+
+    .offline-msg .indicator {
+      font-size: 10px;
+      color: var(--text-dim);
+      opacity: 0.5;
     }
 
     .hidden {
       display: none !important;
     }
 
-    /* --- Info Bar --- */
-    .info-bar {
-      width: 100%;
-      max-width: 960px;
-      margin-top: 16px;
-      padding: 0 24px;
+    /* --- Footer --- */
+    .footer {
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      font-family: var(--font-mono);
-      font-size: 12px;
+      padding-top: 16px;
+      font-size: 10px;
       color: var(--text-dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-left {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-item {
+      display: flex;
+      gap: 8px;
+    }
+
+    .footer-label {
+      opacity: 0.5;
+    }
+
+    /* --- Error state --- */
+    .error-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 10, 10, 0.92);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      font-size: 12px;
+      color: var(--red);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 24px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
+<div class="frame">
 
-<header>
-  <div class="logo">pion<span>-stream</span></div>
+  <!-- HEADER -->
+  <div class="header">
+    <div class="brand">pion<span class="brand-accent">-stream</span></div>
 
-  <div id="status-badge" class="status-badge"
-       hx-get="/status"
-       hx-trigger="every 5s"
-       hx-swap="outerHTML">
-    <div class="status-dot"></div>
-    <span class="status-label offline">Offline</span>
+    <div class="header-right">
+      <!-- Status badge — polled by HTMX every 5s -->
+      <span id="status-badge" class="badge"
+           hx-get="/status"
+           hx-trigger="load, every 5s"
+           hx-swap="outerHTML">
+        <span class="badge-dot"></span>
+        <span class="badge-label offline">OFFLINE</span>
+      </span>
+
+      <!-- Viewer count — updated OOB via status badge response -->
+      <span id="viewer-count" class="viewers">
+        &mdash;
+      </span>
+    </div>
   </div>
-</header>
 
-<div class="video-container">
-  <div id="video-wrapper">
-    <div id="offline-placeholder" class="offline-placeholder">
-      <span class="icon">●</span>
-      <span>Waiting for stream...</span>
-      <span style="font-size:12px;opacity:0.5">Publish from OBS via WHIP to go live</span>
+  <!-- VIDEO STAGE -->
+  <div class="stage" id="stage">
+    <div id="offline-msg" class="offline-msg">
+      <span>[ AWAITING UPLINK ]</span>
+      <span class="indicator">Publish from OBS via WHIP to activate stream</span>
     </div>
     <video id="stream-video" autoplay playsinline muted></video>
+    <div id="error-overlay" class="error-overlay hidden"></div>
   </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-left">
+      <div class="footer-item">
+        <span class="footer-label">PROTOCOL</span>
+        <span>WHIP/WHEP</span>
+      </div>
+      <div class="footer-item">
+        <span class="footer-label">ENGINE</span>
+        <span>PION v4</span>
+      </div>
+    </div>
+    <div id="footer-status" class="footer-item">
+      <span class="footer-label">UPLINK</span>
+      <span>NO CARRIER</span>
+    </div>
+  </div>
+
 </div>
 
-<div id="info-bar" class="info-bar"
-     hx-get="/status"
-     hx-trigger="every 5s"
-     hx-swap="outerHTML">
-</div>
+<script>
+// WHEP client — connects to the server when a stream goes live.
+// This script manages the WebRTC peer connection lifecycle for
+// browser-based playback.
+
+let peerConnection = null;
+let videoElement = document.getElementById('stream-video');
+let offlineMsg = document.getElementById('offline-msg');
+let errorOverlay = document.getElementById('error-overlay');
+let wasLive = false;
+
+// Listen for HTMX after-swap events on the status badge to detect
+// live/offline transitions without polling separately.
+document.body.addEventListener('htmx:afterSwap', function(evt) {
+  if (evt.detail.target.id !== 'status-badge') return;
+
+  const isLive = evt.detail.target.classList.contains('live');
+
+  if (isLive && !wasLive) {
+    wasLive = true;
+    connectWHEP();
+  } else if (!isLive && wasLive) {
+    wasLive = false;
+    disconnectWHEP();
+  }
+});
+
+async function connectWHEP() {
+  try {
+    // Create a WebRTC peer connection for receiving the stream.
+    peerConnection = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+
+    // When remote tracks arrive, attach them to the video element.
+    peerConnection.ontrack = function(event) {
+      if (event.streams && event.streams[0]) {
+        videoElement.srcObject = event.streams[0];
+        videoElement.classList.add('active');
+        offlineMsg.classList.add('hidden');
+        hideError();
+      }
+    };
+
+    // Handle connection failures.
+    peerConnection.oniceconnectionstatechange = function() {
+      if (peerConnection &&
+          (peerConnection.iceConnectionState === 'failed' ||
+           peerConnection.iceConnectionState === 'disconnected')) {
+        showError('SIGNAL LOST');
+      }
+    };
+
+    // Add transceivers for audio and video so the browser
+    // includes them in the SDP offer.
+    peerConnection.addTransceiver('video', { direction: 'recvonly' });
+    peerConnection.addTransceiver('audio', { direction: 'recvonly' });
+
+    // Create an SDP offer and send it to the WHEP endpoint.
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+
+    const response = await fetch('/api/whep', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/sdp' },
+      body: peerConnection.localDescription.sdp
+    });
+
+    if (!response.ok) {
+      throw new Error('WHEP request failed: ' + response.status);
+    }
+
+    // Set the server's SDP answer as the remote description.
+    const answerSDP = await response.text();
+    await peerConnection.setRemoteDescription(
+      new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
+    );
+
+    console.log('[pion-stream] WHEP connection established');
+  } catch (err) {
+    console.error('[pion-stream] WHEP connection failed:', err);
+    showError('CONNECTION FAILED');
+    disconnectWHEP();
+  }
+}
+
+function disconnectWHEP() {
+  if (peerConnection) {
+    peerConnection.close();
+    peerConnection = null;
+  }
+  videoElement.srcObject = null;
+  videoElement.classList.remove('active');
+  offlineMsg.classList.remove('hidden');
+  hideError();
+}
+
+function showError(msg) {
+  errorOverlay.textContent = '[ ' + msg + ' ]';
+  errorOverlay.classList.remove('hidden');
+}
+
+function hideError() {
+  errorOverlay.classList.add('hidden');
+}
+</script>
 
 </body>
 </html>

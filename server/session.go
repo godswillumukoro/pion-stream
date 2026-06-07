@@ -86,29 +86,39 @@ func (s *Session) HandleStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // writeStatusHTML writes an HTML fragment containing the live/offline
-// badge and viewer count. Used by HTMX for in-place DOM updates.
+// badge, viewer count, and footer status. The badge is the primary
+// swapped element; viewer count and footer use hx-swap-oob for
+// simultaneous in-place updates from a single HTMX request.
 func (s *Session) writeStatusHTML(w http.ResponseWriter, live bool, viewers int) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	if live {
 		s.writeHTML(w,
-			`<div id="status-badge" class="status-badge live" hx-get="/status" hx-trigger="every 5s" hx-swap="outerHTML">`,
-			`<div class="status-dot live"></div>`,
-			`<span class="status-label live">Live</span>`,
-			`</div>`,
-			`<div id="viewer-count" class="viewer-count" hx-get="/status" hx-trigger="every 5s" hx-swap="outerHTML">`,
+			`<span id="status-badge" class="badge live" hx-get="/status" hx-trigger="every 5s" hx-swap="outerHTML">`,
+			`<span class="badge-dot"></span>`,
+			`<span class="badge-label live">LIVE</span>`,
+			`</span>`,
+			`<span id="viewer-count" class="viewers" hx-swap-oob="true">`,
 			fmtViewerCount(viewers),
-			`</div>`,
+			`</span>`,
+			`<span id="footer-status" class="footer-item" hx-swap-oob="true">`,
+			`<span class="footer-label">UPLINK</span>`,
+			`<span style="color:var(--accent)">CONNECTED</span>`,
+			`</span>`,
 		)
 	} else {
 		s.writeHTML(w,
-			`<div id="status-badge" class="status-badge" hx-get="/status" hx-trigger="every 5s" hx-swap="outerHTML">`,
-			`<div class="status-dot"></div>`,
-			`<span class="status-label offline">Offline</span>`,
-			`</div>`,
-			`<div id="viewer-count" class="viewer-count" hx-get="/status" hx-trigger="every 5s" hx-swap="outerHTML">`,
+			`<span id="status-badge" class="badge" hx-get="/status" hx-trigger="every 5s" hx-swap="outerHTML">`,
+			`<span class="badge-dot"></span>`,
+			`<span class="badge-label offline">OFFLINE</span>`,
+			`</span>`,
+			`<span id="viewer-count" class="viewers" hx-swap-oob="true">`,
 			`&mdash;`,
-			`</div>`,
+			`</span>`,
+			`<span id="footer-status" class="footer-item" hx-swap-oob="true">`,
+			`<span class="footer-label">UPLINK</span>`,
+			`<span>NO CARRIER</span>`,
+			`</span>`,
 		)
 	}
 }
