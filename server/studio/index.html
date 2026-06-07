@@ -1,1 +1,1037 @@
-<!DOCTYPE html><html><head><title>Studio — pion-stream</title></head><body><h1>Browser Studio</h1><p>Coming soon.</p></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Broadcast Studio — pion-stream</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --border: #222;
+      --divider: #1a1a1a;
+      --amber: #f5a623;
+      --amber-dim: rgba(245, 166, 35, 0.12);
+      --amber-glow: rgba(245, 166, 35, 0.25);
+      --red: #e53935;
+      --red-glow: rgba(229, 57, 53, 0.4);
+      --teal: #2dd4bf;
+      --teal-dim: rgba(45, 212, 191, 0.1);
+      --green: #4caf50;
+      --text: #eaeaea;
+      --text-dim: #888;
+      --text-faint: #555;
+      --font-display: 'Bebas Neue', 'Arial Narrow', sans-serif;
+      --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      min-height: 100dvh;
+      overflow: hidden;
+    }
+
+    /* --- Main Layout: Two Columns --- */
+    .studio {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      height: 100dvh;
+    }
+
+    /* --- Left Column: Controls --- */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      padding: 32px;
+      border-right: 1px solid var(--divider);
+      background: var(--bg);
+      gap: 24px;
+      overflow-y: auto;
+    }
+
+    .brand {
+      font-family: var(--font-display);
+      font-size: 28px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .brand span { color: var(--amber); }
+
+    /* --- Select Fields --- */
+    .field { display: flex; flex-direction: column; gap: 6px; }
+
+    .field-label {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    select, input {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 0;
+      outline: none;
+      width: 100%;
+    }
+
+    select:focus, input:focus {
+      border-color: var(--amber);
+    }
+
+    select:disabled, input:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* --- Audio Meter --- */
+    .meter-section { margin-top: 4px; }
+
+    .audio-meter {
+      display: flex;
+      gap: 3px;
+      height: 24px;
+      align-items: flex-end;
+    }
+
+    .meter-bar {
+      flex: 1;
+      height: 4px;
+      background: var(--border);
+      transition: height 0.1s ease, background 0.2s ease;
+    }
+
+    .meter-bar.low { background: var(--green); }
+    .meter-bar.mid { background: var(--amber); }
+    .meter-bar.peak { background: var(--red); }
+
+    /* --- Go Live Button --- */
+    .go-live-wrap { margin-top: auto; }
+
+    .go-live-btn {
+      width: 100%;
+      padding: 18px 24px;
+      font-family: var(--font-display);
+      font-size: 22px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: 2px solid var(--amber);
+      background: transparent;
+      color: var(--amber);
+      transition: all 0.3s ease;
+    }
+
+    .go-live-btn:hover {
+      background: var(--amber-dim);
+    }
+
+    .go-live-btn:active {
+      transform: scale(0.98);
+    }
+
+    .go-live-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Live state */
+    .go-live-btn.live {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+      animation: live-pulse 2s ease-in-out infinite;
+    }
+
+    .go-live-btn.live:hover {
+      background: #c62828;
+    }
+
+    @keyframes live-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 var(--red-glow); }
+      50% { box-shadow: 0 0 24px 4px var(--red-glow); }
+    }
+
+    /* --- Status Line --- */
+    .status-line {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-align: center;
+      padding-top: 8px;
+      min-height: 20px;
+    }
+
+    .status-line.idle { color: var(--text-dim); }
+    .status-line.connecting { color: var(--amber); }
+    .status-line.live { color: var(--teal); }
+    .status-line.disconnected { color: var(--text-dim); }
+    .status-line.error { color: var(--red); }
+
+    .spinner {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border: 2px solid var(--border);
+      border-top-color: var(--amber);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- Stream Key --- */
+    .stream-key-wrap { display: none; }
+
+    .stream-key-wrap.visible { display: flex; }
+
+    /* --- Right Column: Preview --- */
+    .preview-col {
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      position: relative;
+    }
+
+    .preview-stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Corner badge */
+    .corner-badge {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      font-family: var(--font-display);
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 6px 12px;
+      background: rgba(0,0,0,0.7);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+
+    .corner-badge.live {
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    .corner-badge .badge-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: var(--red);
+      margin-right: 6px;
+      vertical-align: middle;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%,100%{opacity:1;}50%{opacity:0.2;}
+    }
+
+    /* No preview placeholder */
+    .no-preview {
+      text-align: center;
+      color: var(--text-faint);
+    }
+
+    .no-preview .icon {
+      font-size: 48px;
+      display: block;
+      margin-bottom: 12px;
+      opacity: 0.3;
+    }
+
+    .no-preview .label {
+      font-family: var(--font-display);
+      font-size: 16px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .no-preview .sub {
+      font-size: 11px;
+      margin-top: 6px;
+    }
+
+    /* --- Stats Bar --- */
+    .stats-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      padding: 16px 24px;
+      border-top: 1px solid var(--divider);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-dim);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .stats-bar.visible { opacity: 1; }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+    }
+
+    .stat-value.timer {
+      color: var(--text);
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-value.viewers { color: var(--teal); }
+
+    .stat-value.quality.excellent { color: var(--green); }
+    .stat-value.quality.good { color: var(--amber); }
+    .stat-value.quality.degraded { color: var(--red); }
+
+    .stat-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--divider);
+    }
+
+    /* --- Error Banner --- */
+    .error-banner {
+      position: absolute;
+      bottom: 60px;
+      left: 24px;
+      right: 24px;
+      padding: 12px 16px;
+      background: rgba(229, 57, 53, 0.15);
+      border: 1px solid var(--red);
+      color: var(--red);
+      font-size: 11px;
+      text-align: center;
+      display: none;
+    }
+
+    .error-banner.visible { display: block; }
+
+    /* --- Mobile --- */
+    @media (max-width: 768px) {
+      .studio {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: auto;
+        min-height: 100dvh;
+      }
+      .controls {
+        padding: 20px;
+        border-right: none;
+        border-bottom: 1px solid var(--divider);
+        gap: 16px;
+      }
+      .preview-col { min-height: 50dvh; }
+      .stats-bar { gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="studio">
+
+  <!-- ====== LEFT: CONTROLS ====== -->
+  <div class="controls">
+    <div class="brand">pion<span>-stream</span></div>
+
+    <!-- Camera select -->
+    <div class="field">
+      <label class="field-label" for="camera-select">Camera</label>
+      <select id="camera-select" disabled>
+        <option>Detecting cameras...</option>
+      </select>
+    </div>
+
+    <!-- Mic select -->
+    <div class="field">
+      <label class="field-label" for="mic-select">Microphone</label>
+      <select id="mic-select" disabled>
+        <option>Detecting microphones...</option>
+      </select>
+    </div>
+
+    <!-- Audio meter -->
+    <div class="meter-section">
+      <label class="field-label">Audio Level</label>
+      <div class="audio-meter" id="audio-meter">
+        <div class="meter-bar"></div><div class="meter-bar"></div>
+        <div class="meter-bar"></div><div class="meter-bar"></div>
+        <div class="meter-bar"></div><div class="meter-bar"></div>
+        <div class="meter-bar"></div><div class="meter-bar"></div>
+      </div>
+    </div>
+
+    <!-- Stream key (hidden by default) -->
+    <div class="field stream-key-wrap" id="stream-key-wrap">
+      <label class="field-label" for="stream-key">
+        Stream Key (leave blank if not required)
+      </label>
+      <input type="text" id="stream-key" placeholder="Stream key..."
+             autocomplete="off">
+    </div>
+
+    <!-- Go Live -->
+    <div class="go-live-wrap">
+      <button class="go-live-btn" id="go-live-btn" disabled>
+        Go Live
+      </button>
+      <div class="status-line idle" id="status-text">
+        Initialising...
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== RIGHT: PREVIEW ====== -->
+  <div class="preview-col">
+    <div class="preview-stage" id="preview-stage">
+      <div class="no-preview" id="no-preview">
+        <span class="icon">◉</span>
+        <span class="label">No Preview</span>
+        <span class="sub">Select a camera to begin</span>
+      </div>
+      <video id="preview-video" autoplay playsinline muted
+             style="display:none"></video>
+      <div class="corner-badge" id="corner-badge">PREVIEW</div>
+    </div>
+    <div class="error-banner" id="error-banner"></div>
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat">
+        <span class="stat-label">Duration</span>
+        <span class="stat-value timer" id="stat-duration">00:00</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-label">Viewers</span>
+        <span class="stat-value viewers" id="stat-viewers">0</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-label">Quality</span>
+        <span class="stat-value quality" id="stat-quality">—</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+//  StudioUI — manages all DOM state and user interactions.
+//  Does NOT handle WebRTC; that is WhipClient's job.
+// ============================================================
+
+const StudioUI = {
+  elements: {},
+
+  init() {
+    // Cache all DOM references.
+    const ids = [
+      'camera-select','mic-select','audio-meter',
+      'go-live-btn','status-text','stream-key-wrap','stream-key',
+      'preview-video','no-preview','corner-badge',
+      'stats-bar','stat-duration','stat-viewers','stat-quality',
+      'error-banner'
+    ];
+    ids.forEach(id => {
+      this.elements[id] = document.getElementById(id);
+    });
+
+    // Populate device lists, then enable the Go Live button.
+    this.populateDevices().then(() => {
+      this.setStatus('idle', 'Ready');
+      this.elements['go-live-btn'].disabled = false;
+      this.elements['go-live-btn'].textContent = 'Go Live';
+    });
+
+    // Listen for device changes (e.g. unplugging a webcam).
+    navigator.mediaDevices.addEventListener('devicechange', () => {
+      this.populateDevices();
+    });
+
+    // Camera change → update preview.
+    this.elements['camera-select'].addEventListener('change', () => {
+      this.startPreview();
+    });
+
+    // Go Live button.
+    this.elements['go-live-btn'].addEventListener('click', () => {
+      if (WhipClient.isLive) {
+        StudioController.endStream();
+      } else {
+        StudioController.goLive();
+      }
+    });
+
+    // Start preview immediately.
+    this.startPreview();
+  },
+
+  // Enumerate cameras and microphones, populate select elements.
+  async populateDevices() {
+    try {
+      // Request permission so we get device labels.
+      const tempStream = await navigator.mediaDevices.getUserMedia({
+        video: true, audio: true
+      });
+      // Stop temp stream immediately — we only needed labels.
+      tempStream.getTracks().forEach(t => t.stop());
+    } catch (err) {
+      // User denied — we will still list devices but labels may be blank.
+    }
+
+    const devices = await navigator.mediaDevices.enumerateDevices();
+
+    const cameras = devices.filter(d => d.kind === 'videoinput');
+    const mics = devices.filter(d => d.kind === 'audioinput');
+
+    this.populateSelect('camera-select', cameras, 'No camera found');
+    this.populateSelect('mic-select', mics, 'No microphone found');
+  },
+
+  populateSelect(id, devices, emptyMessage) {
+    const select = this.elements[id];
+    select.innerHTML = '';
+    select.disabled = false;
+
+    if (devices.length === 0) {
+      const opt = document.createElement('option');
+      opt.textContent = emptyMessage;
+      select.appendChild(opt);
+      select.disabled = true;
+      return;
+    }
+
+    devices.forEach((device, i) => {
+      const opt = document.createElement('option');
+      opt.value = device.deviceId;
+      opt.textContent = device.label || `${id === 'camera-select' ? 'Camera' : 'Mic'} ${i + 1}`;
+      select.appendChild(opt);
+    });
+  },
+
+  // Show the selected camera and microphone in the preview video.
+  async startPreview() {
+    const cameraId = this.elements['camera-select'].value;
+    const micId = this.elements['mic-select'].value;
+
+    // Stop any existing preview stream.
+    if (this._previewStream) {
+      this._previewStream.getTracks().forEach(t => t.stop());
+    }
+
+    if (!cameraId && !micId) return;
+
+    try {
+      const constraints = {
+        video: cameraId ? { deviceId: { exact: cameraId } } : false,
+        audio: micId ? { deviceId: { exact: micId } } : false,
+      };
+      this._previewStream = await navigator.mediaDevices.getUserMedia(
+        constraints
+      );
+
+      const video = this.elements['preview-video'];
+      video.srcObject = this._previewStream;
+      video.style.display = 'block';
+      this.elements['no-preview'].style.display = 'none';
+
+      // Start audio meter if we have a mic.
+      if (micId) {
+        this.startAudioMeter(this._previewStream);
+      }
+    } catch (err) {
+      this.showError('Camera or mic not available. Check permissions.');
+    }
+  },
+
+  // Audio level meter driven by Web Audio AnalyserNode.
+  startAudioMeter(stream) {
+    // Clean up previous meter.
+    if (this._audioCtx) {
+      this._audioCtx.close();
+    }
+
+    this._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = this._audioCtx.createMediaStreamSource(stream);
+    const analyser = this._audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+
+    const bars = this.elements['audio-meter'].children;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    const update = () => {
+      if (!this._audioCtx) return;
+      analyser.getByteFrequencyData(dataArray);
+
+      // Average the lower frequencies (voice range is mostly low).
+      let sum = 0;
+      const voiceBins = Math.min(32, dataArray.length);
+      for (let i = 0; i < voiceBins; i++) {
+        sum += dataArray[i];
+      }
+      const avg = sum / voiceBins;
+      const level = Math.min(avg / 128, 1); // Normalise 0–1
+
+      // Light up bars proportionally.
+      const activeBars = Math.floor(level * bars.length);
+      for (let i = 0; i < bars.length; i++) {
+        bars[i].style.height = i < activeBars ? '100%' : '4px';
+        bars[i].className = 'meter-bar';
+        if (i < activeBars) {
+          const pct = i / bars.length;
+          if (pct < 0.5) bars[i].classList.add('low');
+          else if (pct < 0.8) bars[i].classList.add('mid');
+          else bars[i].classList.add('peak');
+        }
+      }
+
+      this._meterRaf = requestAnimationFrame(update);
+    };
+    update();
+  },
+
+  stopAudioMeter() {
+    if (this._meterRaf) cancelAnimationFrame(this._meterRaf);
+    if (this._audioCtx) { this._audioCtx.close(); this._audioCtx = null; }
+    const bars = this.elements['audio-meter'].children;
+    for (let i = 0; i < bars.length; i++) {
+      bars[i].style.height = '4px';
+      bars[i].className = 'meter-bar';
+    }
+  },
+
+  // Set the status line text and colour class.
+  setStatus(state, message) {
+    const el = this.elements['status-text'];
+    el.className = 'status-line ' + state;
+    el.textContent = message;
+  },
+
+  // Show a spinner in the status line.
+  setStatusConnecting(message) {
+    const el = this.elements['status-text'];
+    el.className = 'status-line connecting';
+    el.innerHTML = '<span class="spinner"></span>' + message;
+  },
+
+  // Update the Go Live button state.
+  setButtonState(state) {
+    const btn = this.elements['go-live-btn'];
+    btn.className = 'go-live-btn';
+    switch (state) {
+      case 'idle':
+        btn.textContent = 'Go Live';
+        btn.disabled = false;
+        break;
+      case 'connecting':
+        btn.textContent = 'Connecting...';
+        btn.disabled = true;
+        break;
+      case 'live':
+        btn.classList.add('live');
+        btn.textContent = 'End Stream';
+        btn.disabled = false;
+        break;
+      case 'error':
+        btn.textContent = 'Try Again';
+        btn.disabled = false;
+        break;
+    }
+  },
+
+  // Update the live stats bar.
+  showStats(durationSec, viewerCount, quality) {
+    const bar = this.elements['stats-bar'];
+    bar.classList.add('visible');
+
+    // Format duration as MM:SS or HH:MM:SS.
+    const h = Math.floor(durationSec / 3600);
+    const m = Math.floor((durationSec % 3600) / 60);
+    const s = Math.floor(durationSec % 60);
+    const pad = (n) => String(n).padStart(2, '0');
+    if (h > 0) {
+      this.elements['stat-duration'].textContent =
+        pad(h) + ':' + pad(m) + ':' + pad(s);
+    } else {
+      this.elements['stat-duration'].textContent = pad(m) + ':' + pad(s);
+    }
+
+    this.elements['stat-viewers'].textContent = viewerCount;
+
+    const qEl = this.elements['stat-quality'];
+    qEl.textContent = quality;
+    qEl.className = 'stat-value quality ' + quality.toLowerCase();
+  },
+
+  hideStats() {
+    this.elements['stats-bar'].classList.remove('visible');
+  },
+
+  // Show the corner badge.
+  setCornerBadge(state) {
+    const badge = this.elements['corner-badge'];
+    badge.className = 'corner-badge';
+    if (state === 'live') {
+      badge.classList.add('live');
+      badge.innerHTML = '<span class="badge-dot"></span>LIVE';
+    } else {
+      badge.textContent = 'PREVIEW';
+    }
+  },
+
+  // Error banner at the bottom of the preview area.
+  showError(message) {
+    const banner = this.elements['error-banner'];
+    banner.textContent = message;
+    banner.classList.add('visible');
+    // Auto-hide after 8 seconds.
+    clearTimeout(this._errorTimer);
+    this._errorTimer = setTimeout(() => {
+      banner.classList.remove('visible');
+    }, 8000);
+  },
+
+  hideError() {
+    this.elements['error-banner'].classList.remove('visible');
+  },
+
+  // Get the current media stream for WHIP publishing.
+  getStream() {
+    return this._previewStream;
+  },
+
+  // Get the stream key from the input field.
+  getStreamKey() {
+    return this.elements['stream-key'].value.trim();
+  }
+};
+
+
+// ============================================================
+//  WhipClient — manages the WebRTC WHIP connection lifecycle.
+//  Handles SDP offer/answer, ICE negotiation, and teardown.
+// ============================================================
+
+const WhipClient = {
+  peerConnection: null,
+  isLive: false,
+  statsInterval: null,
+
+  // Start publishing the given MediaStream to the WHIP endpoint.
+  async start(stream, streamKey) {
+    // 1. Create RTCPeerConnection with a STUN server for NAT traversal.
+    this.peerConnection = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    });
+
+    // 2. Add every track from the local stream to the peer connection.
+    stream.getTracks().forEach(track => {
+      this.peerConnection.addTrack(track, stream);
+    });
+
+    // 3. Create an SDP offer.
+    const offer = await this.peerConnection.createOffer();
+    await this.peerConnection.setLocalDescription(offer);
+
+    // 4. Wait for ICE candidate gathering to complete before sending.
+    await new Promise((resolve) => {
+      if (this.peerConnection.iceGatheringState === 'complete') {
+        resolve();
+      } else {
+        this.peerConnection.addEventListener(
+          'icegatheringstatechange', () => {
+            if (this.peerConnection.iceGatheringState === 'complete') {
+              resolve();
+            }
+          });
+      }
+    });
+
+    // 5. POST the SDP offer to the WHIP endpoint.
+    const headers = { 'Content-Type': 'application/sdp' };
+    if (streamKey) {
+      headers['Authorization'] = 'Bearer ' + streamKey;
+    }
+
+    const response = await fetch('/api/whip/browser', {
+      method: 'POST',
+      headers: headers,
+      body: this.peerConnection.localDescription.sdp,
+    });
+
+    if (!response.ok) {
+      throw new Error('Server rejected stream: HTTP ' + response.status);
+    }
+
+    // 6. Set the server's SDP answer as the remote description.
+    const answerSDP = await response.text();
+    await this.peerConnection.setRemoteDescription(
+      new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
+    );
+
+    this.isLive = true;
+
+    // Start polling connection quality stats.
+    this.startStatsPolling();
+  },
+
+  // End the stream: send DELETE to WHIP and close the connection.
+  async stop() {
+    this.stopStatsPolling();
+
+    if (this.peerConnection) {
+      try {
+        // WHIP protocol teardown: DELETE to the resource URL.
+        await fetch('/api/whip/browser', { method: 'DELETE' });
+      } catch (err) {
+        // Server may already have cleaned up — that is fine.
+      }
+      this.peerConnection.close();
+      this.peerConnection = null;
+    }
+
+    this.isLive = false;
+  },
+
+  // Poll RTCPeerConnection.getStats() every 3 seconds while live.
+  startStatsPolling() {
+    this.statsInterval = setInterval(async () => {
+      if (!this.peerConnection) return;
+      try {
+        const stats = await this.peerConnection.getStats();
+        let packetsLost = 0;
+        let roundTripTime = 0;
+        stats.forEach(report => {
+          if (report.type === 'remote-inbound-rtp' ||
+              report.type === 'inbound-rtp') {
+            packetsLost += report.packetsLost || 0;
+          }
+          if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+            roundTripTime = report.currentRoundTripTime || 0;
+          }
+        });
+
+        // Determine quality based on packet loss and RTT.
+        let quality = 'Excellent';
+        if (packetsLost > 10 || roundTripTime > 0.3) {
+          quality = 'Degraded';
+        } else if (packetsLost > 3 || roundTripTime > 0.1) {
+          quality = 'Good';
+        }
+
+        // Push to StudioUI if the stats bar is visible.
+        if (document.getElementById('stats-bar').classList.contains('visible')) {
+          const qEl = document.getElementById('stat-quality');
+          if (qEl) {
+            qEl.textContent = quality;
+            qEl.className = 'stat-value quality ' + quality.toLowerCase();
+          }
+        }
+      } catch (err) {
+        // Stats polling is best-effort — ignore errors silently.
+      }
+    }, 3000);
+  },
+
+  stopStatsPolling() {
+    if (this.statsInterval) {
+      clearInterval(this.statsInterval);
+      this.statsInterval = null;
+    }
+  }
+};
+
+
+// ============================================================
+//  StudioController — orchestrates the go-live / end-stream
+//  flow, coordinates StudioUI and WhipClient.
+// ============================================================
+
+const StudioController = {
+  statusTimer: null,
+  durationOffset: 0, // Server-reported duration at last poll, for timer sync.
+
+  async goLive() {
+    StudioUI.hideError();
+
+    const stream = StudioUI.getStream();
+    if (!stream) {
+      StudioUI.showError('No camera selected. Choose a camera first.');
+      return;
+    }
+
+    // Transition through connection states.
+    StudioUI.setButtonState('connecting');
+
+    try {
+      // Wait for ICE gathering.
+      StudioUI.setStatusConnecting('Gathering ICE candidates...');
+
+      const streamKey = StudioUI.getStreamKey();
+      await WhipClient.start(stream, streamKey);
+
+      // Success — we are live.
+      StudioUI.setButtonState('live');
+      StudioUI.setStatus('live', 'Live');
+      StudioUI.setCornerBadge('live');
+
+      // Start polling /status for duration and viewer count.
+      this.startStatusPolling();
+    } catch (err) {
+      console.error('[studio] goLive failed:', err);
+
+      // Map known errors to user-friendly messages.
+      let message = err.message || 'Unknown error';
+      if (message.includes('Permission')) {
+        message = 'Camera permission denied. Check browser settings.';
+      } else if (message.includes('NotReadableError') ||
+                 message.includes('not available')) {
+        message = 'Camera or mic not available. Check permissions.';
+      } else if (message.includes('Failed to fetch') ||
+                 message.includes('NetworkError')) {
+        message = 'Cannot reach server. Is it running?';
+      } else if (message.includes('HTTP')) {
+        // Already formatted by WhipClient.
+      }
+
+      StudioUI.setButtonState('error');
+      StudioUI.setStatus('error', message);
+      StudioUI.showError(message);
+    }
+  },
+
+  async endStream() {
+    await WhipClient.stop();
+
+    this.stopStatusPolling();
+
+    StudioUI.setButtonState('idle');
+    StudioUI.setStatus('disconnected', 'Stream ended');
+    StudioUI.setCornerBadge('idle');
+    StudioUI.hideStats();
+  },
+
+  // Poll /status every 5 seconds while live for duration and viewer count.
+  startStatusPolling() {
+    // Get initial duration from server so timer survives page refresh.
+    this.fetchServerDuration();
+
+    // Start local timer.
+    this._timerStart = Date.now();
+
+    this.statusTimer = setInterval(async () => {
+      try {
+        const resp = await fetch('/status');
+        const data = await resp.json();
+
+        if (data.live) {
+          // Use server duration as source of truth, offset by local time.
+          this.durationOffset = data.duration_seconds;
+          this._timerStart = Date.now();
+          StudioUI.showStats(
+            data.duration_seconds,
+            data.viewers,
+            'Excellent'
+          );
+        } else {
+          // Stream ended on server side (unexpected).
+          StudioUI.setStatus('disconnected', 'Stream lost. Reconnecting...');
+          this.endStreamSilent();
+        }
+      } catch (err) {
+        // Server unreachable — keep showing last known stats.
+      }
+    }, 5000);
+
+    // Also update the local seconds counter every second.
+    this._secondTimer = setInterval(() => {
+      if (!WhipClient.isLive) return;
+      const elapsed = Math.floor((Date.now() - this._timerStart) / 1000);
+      const total = this.durationOffset + elapsed;
+      StudioUI.showStats(total, 0, '');
+    }, 1000);
+  },
+
+  async fetchServerDuration() {
+    try {
+      const resp = await fetch('/status');
+      const data = await resp.json();
+      if (data.live) {
+        this.durationOffset = data.duration_seconds || 0;
+        this._timerStart = Date.now();
+      }
+    } catch (err) {
+      this.durationOffset = 0;
+    }
+  },
+
+  stopStatusPolling() {
+    if (this.statusTimer) {
+      clearInterval(this.statusTimer);
+      this.statusTimer = null;
+    }
+    if (this._secondTimer) {
+      clearInterval(this._secondTimer);
+      this._secondTimer = null;
+    }
+  },
+
+  async endStreamSilent() {
+    await WhipClient.stop();
+    StudioUI.setButtonState('idle');
+    StudioUI.setCornerBadge('idle');
+    StudioUI.hideStats();
+    this.stopStatusPolling();
+  }
+};
+
+
+// ============================================================
+//  Boot
+// ============================================================
+StudioUI.init();
+</script>
+
+</body>
+</html>
