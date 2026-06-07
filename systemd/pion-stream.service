@@ -1,0 +1,27 @@
+[Unit]
+Description=Pion WebRTC Streaming Server
+Documentation=https://github.com/godswill/pion-stream
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/pion-stream
+EnvironmentFile=/opt/pion-stream/.env
+ExecStart=/opt/pion-stream/streaming-server
+Restart=always
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/pion-stream
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pion-stream
+
+[Install]
+WantedBy=multi-user.target
