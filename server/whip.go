@@ -201,23 +201,20 @@ func (s *Session) HandleWHIPDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleWHIPDelete cleans up the current publisher regardless of
-// which WHIP endpoint was used.
+// which WHIP endpoint was used. Idempotent — returns 200 even if
+// no publisher is active (already cleaned up by ICE disconnect).
 func (s *Session) handleWHIPDelete(w http.ResponseWriter) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.publisherPC == nil {
-		http.Error(w, "no active publisher", http.StatusNotFound)
-		return
+	if s.publisherPC != nil {
+		if err := s.publisherPC.Close(); err != nil {
+			s.logger.Error().Err(err).
+				Msg("whip: error closing publisher connection")
+		}
+		s.clearPublisher()
+		s.logger.Info().Msg("whip: publisher disconnected via DELETE")
 	}
-
-	if err := s.publisherPC.Close(); err != nil {
-		s.logger.Error().Err(err).
-			Msg("whip: error closing publisher connection")
-	}
-
-	s.clearPublisher()
 
 	w.WriteHeader(http.StatusOK)
-	s.logger.Info().Msg("whip: publisher disconnected via DELETE")
 }

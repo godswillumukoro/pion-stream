@@ -242,7 +242,7 @@ func (s *Session) newAPI() *webrtc.API {
 	// Use a single UDP port for all ICE connections.
 	settingEngine.SetEphemeralUDPPortRange(
 		uint16(s.config.UDPMuxPort),
-		uint16(s.config.UDPMuxPort),
+		uint16(s.config.UDPMuxPort+1),
 	)
 
 	if s.config.PublicIP != "" {
