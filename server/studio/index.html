@@ -626,13 +626,26 @@ const StudioUI = {
     if (!cameraId && !micId) return;
 
     try {
-      const constraints = {
-        video: cameraId ? { deviceId: { exact: cameraId } } : false,
-        audio: micId ? { deviceId: { exact: micId } } : false,
-      };
+      // Build constraints. Use 'ideal' instead of 'exact' — some
+      // devices fail with exact when the deviceId changes between
+      // enumerateDevices and getUserMedia.
+      const constraints = {};
+      if (cameraId) {
+        constraints.video = { deviceId: { ideal: cameraId } };
+      }
+      if (micId) {
+        constraints.audio = { deviceId: { ideal: micId } };
+      }
+
+      console.log('[studio] getUserMedia constraints:',
+        JSON.stringify(constraints));
+
       this._previewStream = await navigator.mediaDevices.getUserMedia(
         constraints
       );
+
+      console.log('[studio] preview stream acquired:',
+        this._previewStream.getTracks().map(t => t.kind + ':' + t.label));
 
       const video = this.elements['preview-video'];
       video.srcObject = this._previewStream;
@@ -644,7 +657,8 @@ const StudioUI = {
         this.startAudioMeter(this._previewStream);
       }
     } catch (err) {
-      console.error('[studio] preview failed:', err.name, err.message);
+      console.error('[studio] preview failed:',
+        err.name, err.message, err.constraintName);
 
       if (err.name === 'NotAllowedError') {
         this.showError(
@@ -987,9 +1001,25 @@ const StudioController = {
   async goLive() {
     StudioUI.hideError();
 
-    const stream = StudioUI.getStream();
+    let stream = StudioUI.getStream();
+
+    // If no preview stream, try to acquire one now.
+    // This triggers the browser camera permission prompt.
     if (!stream) {
-      StudioUI.showError('No camera selected. Choose a camera first.');
+      StudioUI.setStatusConnecting('Requesting camera...');
+      try {
+        await StudioUI.startPreview();
+        stream = StudioUI.getStream();
+      } catch (err) {
+        // startPreview handles its own error display.
+      }
+    }
+
+    if (!stream) {
+      StudioUI.showError(
+        'No camera available. Open Chrome console (F12) for details.'
+      );
+      StudioUI.setButtonState('error');
       return;
     }
 
