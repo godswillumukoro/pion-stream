@@ -139,9 +139,3 @@ func (s *Session) HandleViewer(w http.ResponseWriter, r *http.Request) {
 		s.logger.Error().Err(err).Msg("failed to write viewer template")
 	}
 }
-
-// HandleWHEP handles the WHEP egress endpoint. Accepts an SDP offer
-// from a viewer and returns an SDP answer with the relayed tracks.
-func (s *Session) HandleWHEP(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "not implemented", http.StatusNotImplemented)
-}
