@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/pion/ice/v4"
 	"github.com/pion/webrtc/v4"
@@ -33,6 +34,14 @@ type Session struct {
 	// publisherPC is the WebRTC PeerConnection for the active
 	// WHIP publisher. nil when no publisher is connected.
 	publisherPC *webrtc.PeerConnection
+
+	// publisherType identifies the source: "obs" or "browser".
+	// Empty string when no publisher is connected.
+	publisherType string
+
+	// startedAt records when the current publisher went live.
+	// Zero time when no publisher is connected.
+	startedAt time.Time
 
 	// publisherTracks stores the media tracks received from the
 	// publisher. Keyed by track ID for lookup when relaying to viewers.
@@ -68,6 +77,23 @@ func NewSession(cfg Config, logger zerolog.Logger) *Session {
 	}
 }
 
+// setPublisher records the publisher's peer connection, type,
+// and start time. Must be called with s.mu held.
+func (s *Session) setPublisher(pc *webrtc.PeerConnection, pubType string) {
+	s.publisherPC = pc
+	s.publisherType = pubType
+	s.startedAt = time.Now()
+}
+
+// clearPublisher removes the current publisher and resets state.
+// Must be called with s.mu held.
+func (s *Session) clearPublisher() {
+	s.publisherPC = nil
+	s.publisherType = ""
+	s.startedAt = time.Time{}
+	s.publisherTracks = make(map[string]*webrtc.TrackRemote)
+}
+
 // isLive returns true when a publisher is currently connected.
 // Must be called while holding s.mu.
 func (s *Session) isLive() bool {
@@ -88,21 +114,29 @@ func (s *Session) HandleStatus(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	live := s.isLive()
 	viewers := s.numViewers()
+	pubType := s.publisherType
+	durationSec := int64(0)
+	if live {
+		durationSec = int64(time.Since(s.startedAt).Seconds())
+	}
 	s.mu.Unlock()
 
 	// HTMX requests receive HTML fragments so the UI updates
 	// without JavaScript or page reloads.
 	if r.Header.Get("HX-Request") == "true" {
-		s.writeStatusHTML(w, live, viewers)
+		s.writeStatusHTML(w, live, viewers, pubType)
 		return
 	}
 
 	// Programmatic consumers receive JSON.
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(struct {
-		Live    bool `json:"live"`
-		Viewers int  `json:"viewers"`
-	}{Live: live, Viewers: viewers}); err != nil {
+		Live            bool   `json:"live"`
+		PublisherType   string `json:"publisher_type"`
+		Viewers         int    `json:"viewers"`
+		DurationSeconds int64  `json:"duration_seconds"`
+	}{Live: live, PublisherType: pubType, Viewers: viewers,
+		DurationSeconds: durationSec}); err != nil {
 		s.logger.Error().Err(err).Msg("failed to encode status response")
 	}
 }
@@ -111,7 +145,7 @@ func (s *Session) HandleStatus(w http.ResponseWriter, r *http.Request) {
 // badge, viewer count, and footer status. The badge is the primary
 // swapped element; viewer count and footer use hx-swap-oob for
 // simultaneous in-place updates from a single HTMX request.
-func (s *Session) writeStatusHTML(w http.ResponseWriter, live bool, viewers int) {
+func (s *Session) writeStatusHTML(w http.ResponseWriter, live bool, viewers int, pubType string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	if live {
@@ -169,6 +203,15 @@ func (s *Session) HandleSite(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if _, err := w.Write(siteTemplate); err != nil {
 		s.logger.Error().Err(err).Msg("failed to write site template")
+	}
+}
+
+// HandleStudio serves the browser studio — a full-featured
+// broadcasting interface for publishing directly from the browser.
+func (s *Session) HandleStudio(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if _, err := w.Write(studioTemplate); err != nil {
+		s.logger.Error().Err(err).Msg("failed to write studio template")
 	}
 }
 

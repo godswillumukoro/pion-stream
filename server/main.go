@@ -44,6 +44,10 @@ func main() {
 	router.Post("/api/whip", session.HandleWHIP)
 	router.Delete("/api/whip", session.HandleWHIPDisconnect)
 
+	// WHIP ingest for browser publishers — separate route for
+	// clarity in educational content.
+	router.Post("/api/whip/browser", session.HandleWHIPBrowser)
+
 	// WHEP egress endpoint — browser-based viewers request the
 	// stream by POSTing their SDP offer.
 	router.Post("/api/whep", session.HandleWHEP)
@@ -60,6 +64,9 @@ func main() {
 
 	// Companion landing page — standalone documentation site.
 	router.Get("/site", session.HandleSite)
+
+	// Browser studio — publish directly from the browser.
+	router.Get("/studio", session.HandleStudio)
 
 	// Viewer UI served at root with embedded HTML template.
 	router.Get("/", session.HandleViewer)
