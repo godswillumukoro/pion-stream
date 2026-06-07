@@ -58,9 +58,7 @@ func (s *Session) HandleWHEP(w http.ResponseWriter, r *http.Request) {
 	api := s.newAPI()
 
 	viewerPC, err := api.NewPeerConnection(webrtc.Configuration{
-		ICEServers: []webrtc.ICEServer{
-			{URLs: []string{s.config.STUNServer}},
-		},
+		ICEServers: s.iceServers(),
 	})
 	if err != nil {
 		http.Error(w, "failed to create peer connection", http.StatusInternalServerError)

@@ -68,9 +68,7 @@ func (s *Session) handleWHIPInternal(
 	api := s.newAPI()
 
 	peerConnection, err := api.NewPeerConnection(webrtc.Configuration{
-		ICEServers: []webrtc.ICEServer{
-			{URLs: []string{s.config.STUNServer}},
-		},
+		ICEServers: s.iceServers(),
 	})
 	if err != nil {
 		http.Error(w, "failed to create peer connection",

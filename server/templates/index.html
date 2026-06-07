@@ -332,7 +332,19 @@ async function connectWHEP() {
   try {
     // Create a WebRTC peer connection for receiving the stream.
     peerConnection = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        {
+          urls: 'turn:stream.talcr.com:3478?transport=udp',
+          username: 'streamuser',
+          credential: 'streampass',
+        },
+        {
+          urls: 'turn:stream.talcr.com:3478?transport=tcp',
+          username: 'streamuser',
+          credential: 'streampass',
+        },
+      ],
     });
 
     // When remote tracks arrive, attach them to the video element.

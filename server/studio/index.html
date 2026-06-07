@@ -868,7 +868,19 @@ const WhipClient = {
   async start(stream, streamKey) {
     // 1. Create RTCPeerConnection with a STUN server for NAT traversal.
     this.peerConnection = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        {
+          urls: 'turn:stream.talcr.com:3478?transport=udp',
+          username: 'streamuser',
+          credential: 'streampass',
+        },
+        {
+          urls: 'turn:stream.talcr.com:3478?transport=tcp',
+          username: 'streamuser',
+          credential: 'streampass',
+        },
+      ],
     });
 
     // 2. Add every track from the local stream to the peer connection.
