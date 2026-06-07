@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pion-stream — Live Viewer</title>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #1a1a1a;
+      --border: #2a2a2a;
+      --accent: #00ff88;
+      --accent-dim: rgba(0, 255, 136, 0.15);
+      --red: #ff3344;
+      --text: #e0e0e0;
+      --text-dim: #888;
+      --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* --- Header --- */
+    header {
+      width: 100%;
+      max-width: 960px;
+      padding: 32px 24px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-family: var(--font-mono);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.5px;
+    }
+
+    .logo span {
+      color: var(--accent);
+    }
+
+    /* --- Status Badge --- */
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+    }
+
+    .status-dot.live {
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .status-badge.live {
+      border-color: rgba(255, 51, 68, 0.3);
+    }
+
+    .status-label {
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .status-label.offline {
+      color: var(--text-dim);
+    }
+
+    .status-label.live {
+      color: var(--red);
+    }
+
+    /* --- Viewer Count --- */
+    .viewer-count {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-dim);
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    /* --- Video Container --- */
+    .video-container {
+      width: 100%;
+      max-width: 960px;
+      margin-top: 24px;
+      padding: 0 24px;
+      aspect-ratio: 16 / 9;
+      background: var(--surface);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none;
+    }
+
+    video.active {
+      display: block;
+    }
+
+    .offline-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 15px;
+    }
+
+    .offline-placeholder .icon {
+      font-size: 48px;
+      opacity: 0.3;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* --- Info Bar --- */
+    .info-bar {
+      width: 100%;
+      max-width: 960px;
+      margin-top: 16px;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">pion<span>-stream</span></div>
+
+  <div id="status-badge" class="status-badge"
+       hx-get="/status"
+       hx-trigger="every 5s"
+       hx-swap="outerHTML">
+    <div class="status-dot"></div>
+    <span class="status-label offline">Offline</span>
+  </div>
+</header>
+
+<div class="video-container">
+  <div id="video-wrapper">
+    <div id="offline-placeholder" class="offline-placeholder">
+      <span class="icon">●</span>
+      <span>Waiting for stream...</span>
+      <span style="font-size:12px;opacity:0.5">Publish from OBS via WHIP to go live</span>
+    </div>
+    <video id="stream-video" autoplay playsinline muted></video>
+  </div>
+</div>
+
+<div id="info-bar" class="info-bar"
+     hx-get="/status"
+     hx-trigger="every 5s"
+     hx-swap="outerHTML">
+</div>
+
+</body>
+</html>
