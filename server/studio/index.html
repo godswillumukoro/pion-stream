@@ -648,20 +648,29 @@ const StudioUI = {
 
       if (err.name === 'NotAllowedError') {
         this.showError(
-          'Camera permission denied. Check browser settings and allow camera access.'
+          'Camera permission denied. Click the camera icon in the ' +
+          'address bar and allow access, then reload.'
         );
       } else if (err.name === 'NotFoundError') {
         this.showError(
-          'No camera or microphone found. Connect a device and refresh.'
+          'No camera found. Connect a webcam and refresh.'
         );
       } else if (err.name === 'NotReadableError') {
         this.showError(
-          'Camera is in use by another application. Close other apps and try again.'
+          'Camera is in use by another app. Close other apps and retry.'
+        );
+      } else if (err.name === 'OverconstrainedError') {
+        this.showError(
+          'The selected camera does not support the requested settings.'
+        );
+      } else if (err.name === 'AbortError') {
+        this.showError(
+          'Camera access was interrupted. Reload the page and try again.'
         );
       } else {
         this.showError(
-          'Camera error: ' + err.message +
-          '. Note: camera access requires HTTPS or localhost.'
+          'Camera error [' + err.name + ']: ' + err.message +
+          '. Check browser camera permissions and reload.'
         );
       }
     }
