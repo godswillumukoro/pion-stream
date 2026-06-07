@@ -459,10 +459,99 @@
   </div>
 </section>
 
-<!-- QUICK START -->
+<!-- BROWSER STUDIO -->
 <section class="section">
   <div class="container">
     <div class="section-label">[ 003 ]</div>
+    <h2 class="section-title">Browser Studio</h2>
+    <div class="section-body">
+      <p>
+        <strong>Stream from your browser. No software required.</strong>
+        The built-in browser studio lets you publish live video directly
+        from Chrome or Firefox — no OBS, no downloads, no configuration.
+        Open <code style="color:var(--accent);background:var(--surface);padding:2px 6px;font-size:11px">/studio</code>,
+        select your camera, and click Go Live.
+      </p>
+      <p>
+        The studio uses the same WHIP endpoint as OBS, so viewers watching
+        at <code style="color:var(--accent);background:var(--surface);padding:2px 6px;font-size:11px">/</code>
+        see the stream instantly — regardless of whether you published from
+        a browser or OBS. One protocol, any client.
+      </p>
+    </div>
+
+    <!-- SVG mockup -->
+    <div style="display:flex;gap:1px;margin:24px 0;border:1px solid var(--border);">
+      <div style="flex:1;background:var(--surface);padding:20px;font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;">
+        ◉ CAMERA SELECT<br>
+        ◉ MIC SELECT<br>
+        ◉ AUDIO METER ▂▃▅▇<br>
+        <span style="display:block;margin-top:16px;padding:10px;border:2px solid #f5a623;text-align:center;color:#f5a623;font-family:var(--font-display);font-size:16px;letter-spacing:2px;">GO LIVE</span>
+        <span style="display:block;margin-top:6px;text-align:center;">Status: ready</span>
+      </div>
+      <div style="flex:2;background:var(--bg);padding:20px;text-align:center;color:var(--text-faint);font-size:10px;text-transform:uppercase;display:flex;align-items:center;justify-content:center;">
+        <span>PREVIEW · 00:00 | 0 watching</span>
+      </div>
+    </div>
+
+    <!-- Collapsed code block -->
+    <details style="margin:16px 0 24px;border:1px solid var(--border);">
+      <summary style="padding:14px 16px;background:var(--surface);cursor:pointer;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);">
+        View the publisher code (40 lines of vanilla JS)
+      </summary>
+      <div class="code-block" style="margin:0;border:none;border-top:1px solid var(--border);">
+        <code><span class="comment">// WhipClient.start() — publish a MediaStream via WHIP</span>
+<span class="cmd">async</span> <span class="comment">start</span>(stream, streamKey) {
+  <span class="comment">// 1. Create peer connection with STUN server</span>
+  <span class="cmd">this</span>.pc = <span class="cmd">new</span> RTCPeerConnection({
+    iceServers: [{ urls: <span class="cmd">'stun:stun.l.google.com:19302'</span> }]
+  });
+
+  <span class="comment">// 2. Add local tracks</span>
+  stream.getTracks().forEach(track => {
+    <span class="cmd">this</span>.pc.addTrack(track, stream);
+  });
+
+  <span class="comment">// 3. Create SDP offer</span>
+  <span class="cmd">const</span> offer = <span class="cmd">await</span> <span class="cmd">this</span>.pc.createOffer();
+  <span class="cmd">await</span> <span class="cmd">this</span>.pc.setLocalDescription(offer);
+
+  <span class="comment">// 4. Wait for ICE gathering</span>
+  <span class="cmd">await new</span> Promise(resolve => {
+    <span class="cmd">if</span> (<span class="cmd">this</span>.pc.iceGatheringState === <span class="cmd">'complete'</span>) resolve();
+    <span class="cmd">else this</span>.pc.addEventListener(
+      <span class="cmd">'icegatheringstatechange'</span>, () => resolve());
+  });
+
+  <span class="comment">// 5. POST offer to WHIP endpoint</span>
+  <span class="cmd">const</span> resp = <span class="cmd">await</span> fetch(<span class="cmd">'/api/whip/browser'</span>, {
+    method: <span class="cmd">'POST'</span>,
+    headers: { <span class="cmd">'Content-Type'</span>: <span class="cmd">'application/sdp'</span> },
+    body: <span class="cmd">this</span>.pc.localDescription.sdp
+  });
+
+  <span class="comment">// 6. Set remote answer</span>
+  <span class="cmd">const</span> answerSDP = <span class="cmd">await</span> resp.text();
+  <span class="cmd">await this</span>.pc.setRemoteDescription(
+    <span class="cmd">new</span> RTCSessionDescription({
+      type: <span class="cmd">'answer'</span>, sdp: answerSDP
+    })
+  );
+}</code>
+      </div>
+    </details>
+
+    <p class="section-body" style="font-size:12px;color:var(--text-dim)">
+      Open <a href="/studio" style="color:var(--accent);">/studio</a>
+      in your browser — no installation, no configuration.
+    </p>
+  </div>
+</section>
+
+<!-- QUICK START -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">[ 004 ]</div>
     <h2 class="section-title">Quick Start</h2>
     <div class="code-block">
       <code><span class="comment"># Clone the repository</span>
@@ -485,7 +574,7 @@
 <!-- CONFIGURATION -->
 <section class="section">
   <div class="container">
-    <div class="section-label">[ 004 ]</div>
+    <div class="section-label">[ 005 ]</div>
     <h2 class="section-title">Configuration</h2>
     <p class="section-body" style="margin-bottom:16px;">
       All settings are configured via environment variables. Copy
@@ -540,7 +629,7 @@
 <!-- STACK -->
 <section class="section">
   <div class="container">
-    <div class="section-label">[ 005 ]</div>
+    <div class="section-label">[ 006 ]</div>
     <h2 class="section-title">Stack</h2>
     <div class="stack-grid">
       <div class="stack-item">
@@ -582,7 +671,7 @@
 <!-- ABOUT -->
 <section class="section">
   <div class="container">
-    <div class="section-label">[ 006 ]</div>
+    <div class="section-label">[ 007 ]</div>
     <h2 class="section-title">About</h2>
     <div class="section-body">
       <p>
