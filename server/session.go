@@ -149,3 +149,34 @@ func (s *Session) HandleViewer(w http.ResponseWriter, r *http.Request) {
 		s.logger.Error().Err(err).Msg("failed to write viewer template")
 	}
 }
+
+// addViewer registers a new viewer PeerConnection and increments the
+// viewer count. Must be called with s.mu held.
+func (s *Session) addViewer(pc *webrtc.PeerConnection) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.viewers = append(s.viewers, pc)
+}
+
+// removeViewer unregisters a viewer PeerConnection and decrements the
+// viewer count. Safe to call even if the viewer isn't in the list.
+func (s *Session) removeViewer(pc *webrtc.PeerConnection) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i, v := range s.viewers {
+		if v == pc {
+			s.viewers = append(s.viewers[:i], s.viewers[i+1:]...)
+			return
+		}
+	}
+}
+
+// viewerIDCounter is a simple incrementing counter for generating
+// human-readable viewer IDs in log output.
+var viewerIDCounter int
+
+// generateViewerID returns a unique viewer identifier for logging.
+func generateViewerID() string {
+	viewerIDCounter++
+	return fmt.Sprintf("viewer-%d", viewerIDCounter)
+}
