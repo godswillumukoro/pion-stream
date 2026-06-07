@@ -46,7 +46,7 @@ type Session struct {
 }
 
 // NewSession creates a new streaming session with the given
-// configuration and logger.
+// configuration and logger. Sets up TCP and UDP listeners for ICE.
 func NewSession(cfg Config, logger zerolog.Logger) *Session {
 	return &Session{
 		config:          cfg,
@@ -233,13 +233,10 @@ func generateViewerID() string {
 	return fmt.Sprintf("viewer-%d", viewerIDCounter)
 }
 
-// newAPI creates a configured WebRTC API with a single UDP port
-// and NAT 1:1 IP mapping. This is used by both WHIP and WHEP
-// handlers so all peer connections share one UDP socket.
+// newAPI creates a configured WebRTC API with UDP ICE support.
 func (s *Session) newAPI() *webrtc.API {
 	settingEngine := webrtc.SettingEngine{}
 
-	// Use a single UDP port for all ICE connections.
 	settingEngine.SetEphemeralUDPPortRange(
 		uint16(s.config.UDPMuxPort),
 		uint16(s.config.UDPMuxPort+1),
