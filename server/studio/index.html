@@ -868,6 +868,7 @@ const WhipClient = {
   async start(stream, streamKey) {
     // 1. Create RTCPeerConnection with a STUN server for NAT traversal.
     this.peerConnection = new RTCPeerConnection({
+      iceTransportPolicy: 'relay',
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         {
