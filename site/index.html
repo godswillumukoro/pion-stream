@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pion-stream — Self-hosted WebRTC streaming server</title>
+  <meta name="description" content="A self-hosted live streaming server built on Pion WebRTC. Publish from OBS via WHIP. Watch in any browser via WHEP. Single Go binary. No transcoding. Sub-500ms latency.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --border: #252525;
+      --accent: #4af626;
+      --accent-dim: rgba(74, 246, 38, 0.08);
+      --red: #ff2a2a;
+      --red-dim: rgba(255, 42, 42, 0.1);
+      --text: #eaeaea;
+      --text-dim: #6b6b6b;
+      --text-faint: #3d3d3d;
+      --font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', monospace;
+      --font-display: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      line-height: 1.7;
+      min-height: 100dvh;
+      /* CRT scanline */
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.025) 2px,
+          rgba(0, 0, 0, 0.025) 4px
+        );
+    }
+
+    /* --- Layout --- */
+    .container {
+      width: 100%;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* --- Hero Section --- */
+    .hero {
+      padding: 80px 0 64px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero-eyebrow {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 24px;
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+
+    .hero-title span {
+      color: var(--accent);
+    }
+
+    .hero-subtitle {
+      font-size: 15px;
+      color: var(--text-dim);
+      max-width: 540px;
+      margin-bottom: 36px;
+      line-height: 1.6;
+    }
+
+    .hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: var(--bg);
+      background: var(--accent);
+      padding: 14px 28px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .hero-cta:hover {
+      background: #3dd620;
+    }
+
+    .hero-cta .arrow {
+      font-size: 16px;
+    }
+
+    /* --- Section --- */
+    .section {
+      padding: 64px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section:last-of-type {
+      border-bottom: none;
+    }
+
+    .section-label {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 24px;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      margin-bottom: 20px;
+    }
+
+    .section-body {
+      color: var(--text-dim);
+      line-height: 1.7;
+    }
+
+    .section-body p {
+      margin-bottom: 16px;
+    }
+
+    .section-body a {
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 1px solid var(--accent-dim);
+    }
+
+    .section-body a:hover {
+      border-bottom-color: var(--accent);
+    }
+
+    /* --- Diagram --- */
+    .diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 40px 0;
+      flex-wrap: wrap;
+    }
+
+    .diagram-node {
+      padding: 16px 24px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    .diagram-node.highlight {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .diagram-arrow {
+      padding: 0 16px;
+      font-size: 11px;
+      color: var(--text-faint);
+    }
+
+    /* --- Code Block --- */
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 24px;
+      margin: 16px 0 24px;
+      overflow-x: auto;
+      position: relative;
+    }
+
+    .code-block code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.8;
+      color: var(--text);
+      white-space: pre;
+    }
+
+    .code-block .comment {
+      color: var(--text-faint);
+    }
+
+    .code-block .cmd {
+      color: var(--accent);
+    }
+
+    /* Fade-in code blocks on scroll */
+    .code-block {
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .code-block.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* --- Config Table --- */
+    .config-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin: 16px 0 24px;
+    }
+
+    .config-table th,
+    .config-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .config-table th {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      font-weight: 500;
+      background: var(--surface);
+    }
+
+    .config-table td {
+      color: var(--text-dim);
+    }
+
+    .config-table td:first-child {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .config-table td:nth-child(3) {
+      color: var(--text-faint);
+      font-size: 11px;
+    }
+
+    /* --- Stack Grid --- */
+    .stack-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      margin: 16px 0 24px;
+    }
+
+    .stack-item {
+      background: var(--surface);
+      padding: 20px 24px;
+    }
+
+    .stack-item-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 15px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .stack-item-desc {
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    .stack-item-link {
+      display: inline-block;
+      margin-top: 10px;
+      font-size: 10px;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* --- About Section --- */
+    .about-grid {
+      display: flex;
+      gap: 24px;
+      margin-top: 16px;
+    }
+
+    .about-card {
+      flex: 1;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      padding: 24px;
+    }
+
+    .about-card-label {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: 10px;
+    }
+
+    .about-card a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    /* --- Footer --- */
+    .footer {
+      padding: 48px 0 64px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+    }
+
+    /* --- Responsive --- */
+    @media (max-width: 640px) {
+      .hero {
+        padding: 48px 0 40px;
+      }
+
+      .section {
+        padding: 40px 0;
+      }
+
+      .stack-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .about-grid {
+        flex-direction: column;
+      }
+
+      .diagram {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .diagram-arrow {
+        transform: rotate(90deg);
+      }
+
+      .config-table {
+        font-size: 10px;
+      }
+
+      .config-table th,
+      .config-table td {
+        padding: 8px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-eyebrow">[ OPEN SOURCE / v1.0 ]</div>
+    <h1 class="hero-title">pion<span>-stream</span></h1>
+    <p class="hero-subtitle">
+      A self-hosted live streaming server built on Pion WebRTC.
+      Publish from OBS via WHIP. Watch in any browser via WHEP.
+      Single Go binary. No transcoding. Sub-500ms latency.
+    </p>
+    <a href="https://github.com/godswill/pion-stream" class="hero-cta">
+      VIEW ON GITHUB <span class="arrow">→</span>
+    </a>
+  </div>
+</section>
+
+<!-- WHAT THIS IS -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">[ 001 ]</div>
+    <h2 class="section-title">What This Is</h2>
+    <div class="section-body">
+      <p>
+        pion-stream is a self-hosted WebRTC streaming server that lets you
+        publish live video from OBS Studio and watch it in any modern browser —
+        no Twitch account, no YouTube channel, no CDN required.
+      </p>
+      <p>
+        It implements the <strong>WHIP</strong> (WebRTC-HTTP Ingest Protocol)
+        for publishing and <strong>WHEP</strong> (WebRTC-HTTP Egress Protocol)
+        for playback. Both are emerging IETF standards designed to make
+        WebRTC streaming as simple as HTTP.
+      </p>
+      <p>
+        Built entirely on <a href="https://github.com/pion/webrtc">Pion WebRTC</a>,
+        the pure-Go WebRTC implementation. No cgo. No external dependencies.
+        Ships as a single static binary.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">[ 002 ]</div>
+    <h2 class="section-title">How It Works</h2>
+    <div class="diagram">
+      <div class="diagram-node">
+        OBS STUDIO<br><span style="font-size:9px;color:var(--text-faint)">WHIP CLIENT</span>
+      </div>
+      <div class="diagram-arrow">── WHIP →</div>
+      <div class="diagram-node highlight">
+        pion-stream<br><span style="font-size:9px;color:var(--accent)">SERVER</span>
+      </div>
+      <div class="diagram-arrow">← WHEP ──</div>
+      <div class="diagram-node">
+        BROWSER<br><span style="font-size:9px;color:var(--text-faint)">WHEP CLIENT</span>
+      </div>
+    </div>
+    <p class="section-body" style="text-align:center;font-size:11px;color:var(--text-faint);margin-top:8px;">
+      RTP packets forwarded directly — no transcoding, no re-encoding
+    </p>
+  </div>
+</section>
+
+<!-- QUICK START -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">[ 003 ]</div>
+    <h2 class="section-title">Quick Start</h2>
+    <div class="code-block">
+      <code><span class="comment"># Clone the repository</span>
+<span class="cmd">git clone</span> https://github.com/godswill/pion-stream
+<span class="cmd">cd</span> pion-stream
+
+<span class="comment"># Build and run locally</span>
+<span class="cmd">make build</span>
+<span class="cmd">./streaming-server</span>
+
+<span class="comment"># Or deploy to a VPS in one command</span>
+<span class="cmd">./scripts/setup.sh</span></code>
+    </div>
+    <p class="section-body" style="font-size:12px;color:var(--text-dim)">
+      Then open <code style="color:var(--accent);background:var(--surface);padding:2px 6px;font-size:11px">http://YOUR_SERVER_IP:8080</code> in your browser.
+    </p>
+  </div>
+</section>
+
+<!-- CONFIGURATION -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">[ 004 ]</div>
+    <h2 class="section-title">Configuration</h2>
+    <p class="section-body" style="margin-bottom:16px;">
+      All settings are configured via environment variables. Copy
+      <code style="color:var(--accent);background:var(--surface);padding:2px 6px;font-size:11px">.env.example</code>
+      to <code style="color:var(--accent);background:var(--surface);padding:2px 6px;font-size:11px">.env</code>
+      and edit as needed.
+    </p>
+    <table class="config-table">
+      <thead>
+        <tr>
+          <th>Variable</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>PORT</td>
+          <td>HTTP server listen port</td>
+          <td>8080</td>
+        </tr>
+        <tr>
+          <td>UDP_PORT_MIN</td>
+          <td>Start of ICE UDP candidate port range</td>
+          <td>3000</td>
+        </tr>
+        <tr>
+          <td>UDP_PORT_MAX</td>
+          <td>End of ICE UDP candidate port range</td>
+          <td>4000</td>
+        </tr>
+        <tr>
+          <td>PUBLIC_IP</td>
+          <td>Server public IP for ICE host candidates</td>
+          <td>(auto-detect)</td>
+        </tr>
+        <tr>
+          <td>STUN_SERVER</td>
+          <td>STUN server URL for NAT traversal</td>
+          <td>stun:stun.l.google.com:19302</td>
+        </tr>
+        <tr>
+          <td>STREAM_KEY</td>
+          <td>Optional bearer token for WHIP auth</td>
+          <td>(none)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- STACK -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">[ 005 ]</div>
+    <h2 class="section-title">Stack</h2>
+    <div class="stack-grid">
+      <div class="stack-item">
+        <div class="stack-item-name">Go + Chi</div>
+        <div class="stack-item-desc">
+          HTTP routing and middleware. Clean, idiomatic, composable.
+          Single binary with no runtime dependencies.
+        </div>
+        <a href="https://github.com/go-chi/chi" class="stack-item-link">github.com/go-chi/chi →</a>
+      </div>
+      <div class="stack-item">
+        <div class="stack-item-name">Pion WebRTC</div>
+        <div class="stack-item-desc">
+          Pure-Go WebRTC implementation. Handles ICE, DTLS, SRTP —
+          everything needed for real-time media.
+        </div>
+        <a href="https://github.com/pion/webrtc" class="stack-item-link">github.com/pion/webrtc →</a>
+      </div>
+      <div class="stack-item">
+        <div class="stack-item-name">HTMX</div>
+        <div class="stack-item-desc">
+          Dynamic UI without writing JavaScript. The viewer page
+          polls for live status and viewer count automatically.
+        </div>
+        <a href="https://htmx.org" class="stack-item-link">htmx.org →</a>
+      </div>
+      <div class="stack-item">
+        <div class="stack-item-name">Systemd</div>
+        <div class="stack-item-desc">
+          Native Linux service management. Automatic restart on
+          crash. Logs to journald. Zero container overhead.
+        </div>
+        <a href="https://systemd.io" class="stack-item-link">systemd.io →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">[ 006 ]</div>
+    <h2 class="section-title">About</h2>
+    <div class="section-body">
+      <p>
+        Built by <strong>Godswill</strong> — a software engineer exploring
+        WebRTC, real-time media, and the Pion library. This project is part
+        of a video series documenting the journey from zero to production-grade
+        streaming infrastructure.
+      </p>
+    </div>
+    <div class="about-grid">
+      <div class="about-card">
+        <div class="about-card-label">WATCH</div>
+        <a href="#">YouTube Channel →</a>
+      </div>
+      <div class="about-card">
+        <div class="about-card-label">CODE</div>
+        <a href="https://github.com/godswill/pion-stream">GitHub →</a>
+      </div>
+      <div class="about-card">
+        <div class="about-card-label">LEARN</div>
+        <a href="https://webrtcforthestreamer.com">WebRTC for the Streamer →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    pion-stream &copy; 2025 · MIT License · Built with Go + Pion WebRTC
+  </div>
+</footer>
+
+<script>
+// Scroll-triggered fade-in for code blocks.
+// Vanilla JS — no framework needed.
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.code-block').forEach(el => observer.observe(el));
+
+// Initialize visible state for code blocks already in view on load.
+window.addEventListener('load', () => {
+  document.querySelectorAll('.code-block').forEach(el => {
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight) {
+      el.classList.add('visible');
+    }
+  });
+});
+</script>
+
+</body>
+</html>
