@@ -4,6 +4,15 @@ A self-hosted live streaming server built on Pion WebRTC.
 Publish from OBS via WHIP. Watch in any browser via WHEP.
 Single Go binary. No transcoding. Sub-500ms latency.
 
+## Live Demo
+
+```
+Viewer:  http://172.239.127.130:8080
+Landing: http://172.239.127.130:8080/site
+Health:  http://172.239.127.130:8080/health
+Status:  http://172.239.127.130:8080/status
+```
+
 ## Quick Start
 
 ```bash
@@ -14,7 +23,53 @@ cd pion-stream
 
 Then open `http://YOUR_SERVER_IP:8080` in your browser.
 
-## Publish from OBS
+## How to Test Live Streaming
+
+### 1. Check the server is running
+
+```bash
+curl http://172.239.127.130:8080/health
+# → OK
+```
+
+### 2. Publish from OBS Studio
+
+1. Open OBS Studio
+2. **Settings → Stream → Service:** Custom
+3. **Server:** `http://172.239.127.130:8080/api/whip`
+4. **Stream Key:** leave blank
+5. **Settings → Output → Encoder:** x264 (H.264)
+6. Click **Start Streaming**
+
+### 3. Watch in any browser
+
+Open `http://172.239.127.130:8080` — the stream appears automatically.
+
+### 4. Verify the status
+
+```bash
+curl http://172.239.127.130:8080/status
+# → {"live":true,"viewers":1}
+```
+
+### 5. Test with multiple viewers
+
+Open the viewer URL in multiple browser tabs. The viewer count
+increments with each connection.
+
+### 6. Test WHIP auth (optional)
+
+Set `STREAM_KEY=mysecret` in `.env`, restart the server, then
+pass the key in OBS as the stream key or via header:
+
+```bash
+curl -X POST http://172.239.127.130:8080/api/whip \
+  -H "Authorization: Bearer mysecret" \
+  -H "Content-Type: application/sdp" \
+  --data-binary @offer.sdp
+```
+
+## Publish from OBS (Quick Reference)
 
 1. Open OBS Studio
 2. Settings → Stream → Service: **Custom**
@@ -23,7 +78,19 @@ Then open `http://YOUR_SERVER_IP:8080` in your browser.
 5. Output → Encoder: **H.264** (x264)
 6. Click **Start Streaming**
 
-See `scripts/configure-obs.md` for detailed instructions.
+See `scripts/configure-obs.md` for detailed instructions with screenshots.
+
+## Server Endpoints
+
+| Method | Path | Description | Response |
+|--------|------|-------------|----------|
+| `GET` | `/` | Stream viewer UI (HTMX) | HTML |
+| `GET` | `/site` | Companion landing page | HTML |
+| `GET` | `/health` | Health check | `200 OK` |
+| `GET` | `/status` | Stream status | `{"live":bool,"viewers":int}` |
+| `POST` | `/api/whip` | WHIP ingest (OBS → server) | SDP answer |
+| `DELETE` | `/api/whip` | Publisher disconnect | `200 OK` |
+| `POST` | `/api/whep` | WHEP egress (server → browser) | SDP answer |
 
 ## Configuration
 
