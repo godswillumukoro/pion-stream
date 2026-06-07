@@ -7,10 +7,10 @@ Single Go binary. No transcoding. Sub-500ms latency.
 ## Live Demo
 
 ```
-Viewer:  http://172.239.127.130:8080
-Landing: http://172.239.127.130:8080/site
-Health:  http://172.239.127.130:8080/health
-Status:  http://172.239.127.130:8080/status
+Viewer:  http://172.239.127.130
+Landing: http://172.239.127.130/site
+Health:  http://172.239.127.130/health
+Status:  http://172.239.127.130/status
 ```
 
 ## Quick Start
@@ -21,14 +21,14 @@ cd pion-stream
 ./scripts/setup.sh
 ```
 
-Then open `http://YOUR_SERVER_IP:8080` in your browser.
+Then open `http://YOUR_SERVER_IP` in your browser.
 
 ## How to Test Live Streaming
 
 ### 1. Check the server is running
 
 ```bash
-curl http://172.239.127.130:8080/health
+curl http://172.239.127.130/health
 # → OK
 ```
 
@@ -36,19 +36,19 @@ curl http://172.239.127.130:8080/health
 
 1. Open OBS Studio
 2. **Settings → Stream → Service:** Custom
-3. **Server:** `http://172.239.127.130:8080/api/whip`
+3. **Server:** `http://172.239.127.130/api/whip`
 4. **Stream Key:** leave blank
 5. **Settings → Output → Encoder:** x264 (H.264)
 6. Click **Start Streaming**
 
 ### 3. Watch in any browser
 
-Open `http://172.239.127.130:8080` — the stream appears automatically.
+Open `http://172.239.127.130` — the stream appears automatically.
 
 ### 4. Verify the status
 
 ```bash
-curl http://172.239.127.130:8080/status
+curl http://172.239.127.130/status
 # → {"live":true,"viewers":1}
 ```
 
@@ -63,7 +63,7 @@ Set `STREAM_KEY=mysecret` in `.env`, restart the server, then
 pass the key in OBS as the stream key or via header:
 
 ```bash
-curl -X POST http://172.239.127.130:8080/api/whip \
+curl -X POST http://172.239.127.130/api/whip \
   -H "Authorization: Bearer mysecret" \
   -H "Content-Type: application/sdp" \
   --data-binary @offer.sdp
@@ -73,7 +73,7 @@ curl -X POST http://172.239.127.130:8080/api/whip \
 
 1. Open OBS Studio
 2. Settings → Stream → Service: **Custom**
-3. Server: `http://YOUR_SERVER_IP:8080/api/whip`
+3. Server: `http://YOUR_SERVER_IP/api/whip`
 4. Stream Key: leave blank (or set `STREAM_KEY` in `.env`)
 5. Output → Encoder: **H.264** (x264)
 6. Click **Start Streaming**
@@ -98,7 +98,7 @@ All settings via environment variables (see `.env.example`):
 
 | Variable | Default | Description |
 |---|---|---|
-| `PORT` | `8080` | HTTP server port |
+| `PORT` | `80` | HTTP server port |
 | `UDP_PORT_MIN` | `3000` | ICE UDP port range start |
 | `UDP_PORT_MAX` | `4000` | ICE UDP port range end |
 | `PUBLIC_IP` | (auto) | VPS public IP for ICE candidates |

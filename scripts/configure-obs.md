@@ -17,7 +17,7 @@ in the Controls dock, then select **Stream** from the sidebar).
 - **Service:** Select **Custom...** from the dropdown
 - **Server:** Enter your pion-stream WHIP endpoint:
   ```
-  http://YOUR_VPS_IP:8080/api/whip
+  http://YOUR_VPS_IP/api/whip
   ```
 - **Stream Key:** Leave blank unless you set a `STREAM_KEY` in your `.env`
   file. If you did set one, enter it here.
@@ -64,7 +64,7 @@ Go to **Settings → Output** and set the **Output Mode** to **Advanced**.
 
 You should see the status bar at the bottom of OBS show a green square
 indicating the stream is live. The pion-stream viewer page at
-`http://YOUR_VPS_IP:8080` should now show **LIVE** with the video playing.
+`http://YOUR_VPS_IP` should now show **LIVE** with the video playing.
 
 ---
 
@@ -74,14 +74,14 @@ indicating the stream is live. The pion-stream viewer page at
 
 1. **Check the server is running:**
    ```bash
-   curl http://YOUR_VPS_IP:8080/health
+   curl http://YOUR_VPS_IP/health
    # Should return: OK
    ```
 
 2. **Check firewall ports:**
    ```bash
    sudo ufw status
-   # Should show: 8080/tcp ALLOW, 3000:4000/udp ALLOW
+   # Should show: 80/tcp ALLOW, 3000:4000/udp ALLOW
    ```
 
 3. **Check server logs:**

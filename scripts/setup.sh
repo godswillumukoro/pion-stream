@@ -98,7 +98,7 @@ configure_firewall() {
     fi
 
     echo "[…] Configuring firewall ..."
-    ufw allow 8080/tcp comment 'pion-stream HTTP' || true
+    ufw allow 80/tcp comment 'pion-stream HTTP' || true
     ufw allow 3000:4000/udp comment 'pion-stream WebRTC media' || true
     ufw --force enable || true
     echo "[✓] Firewall configured"
@@ -138,8 +138,8 @@ verify() {
         return
     fi
 
-    if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
-        echo "[✓] Health check passed (http://localhost:8080/health)"
+    if curl -sf http://localhost/health > /dev/null 2>&1; then
+        echo "[✓] Health check passed (http://localhost/health)"
     else
         echo "[✗] Health check failed"
     fi
@@ -163,8 +163,8 @@ echo ""
 echo "================================================"
 echo "  pion-stream is live!"
 echo ""
-echo "  Viewer:  http://${PUBLIC_IP}:8080"
-echo "  Health:  http://${PUBLIC_IP}:8080/health"
+echo "  Viewer:  http://${PUBLIC_IP}"
+echo "  Health:  http://${PUBLIC_IP}/health"
 echo "  Status:  systemctl status pion-stream"
 echo "  Logs:    journalctl -u pion-stream -f"
 echo "================================================"

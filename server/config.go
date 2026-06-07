@@ -36,7 +36,7 @@ type Config struct {
 // DefaultConfig returns a Config populated with safe defaults.
 func DefaultConfig() Config {
 	return Config{
-		Port:       8080,
+		Port:       80,
 		UDPPortMin: 3000,
 		UDPPortMax: 4000,
 		PublicIP:   "",
