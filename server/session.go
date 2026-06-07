@@ -140,17 +140,6 @@ func (s *Session) HandleViewer(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// HandleWHIP handles the WHIP ingest endpoint. Accepts an SDP offer
-// from a publisher (OBS) and returns an SDP answer.
-func (s *Session) HandleWHIP(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "not implemented", http.StatusNotImplemented)
-}
-
-// HandleWHIPDisconnect handles publisher disconnect via DELETE.
-func (s *Session) HandleWHIPDisconnect(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "not implemented", http.StatusNotImplemented)
-}
-
 // HandleWHEP handles the WHEP egress endpoint. Accepts an SDP offer
 // from a viewer and returns an SDP answer with the relayed tracks.
 func (s *Session) HandleWHEP(w http.ResponseWriter, r *http.Request) {
