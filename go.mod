@@ -1,4 +1,4 @@
-module github.com/godswill/pion-stream
+module github.com/godswillumukoro/pion-stream
 
 go 1.25.6
 

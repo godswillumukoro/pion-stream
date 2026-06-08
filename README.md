@@ -16,7 +16,7 @@ Status:  http://172.239.127.130/status
 ## Quick Start
 
 ```bash
-git clone https://github.com/godswill/pion-stream
+git clone https://github.com/godswillumukoro/pion-stream
 cd pion-stream
 ./scripts/setup.sh
 ```
