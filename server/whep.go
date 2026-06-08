@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/pion/rtcp"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -70,7 +71,7 @@ func (s *Session) HandleWHEP(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		_, err = viewerPC.AddTrack(localTrack)
+		rtpSender, err := viewerPC.AddTrack(localTrack)
 		if err != nil {
 			addTrackErrors++
 			s.logger.Error().Err(err).Str("track_id", pt.track.ID()).Msg("whep: AddTrack failed")
@@ -79,6 +80,7 @@ func (s *Session) HandleWHEP(w http.ResponseWriter, r *http.Request) {
 
 		if pt.kind == webrtc.RTPCodecTypeVideo {
 			vts.videoTrack = localTrack
+			s.startViewerRTCPReader(viewerID, rtpSender)
 		} else {
 			vts.audioTrack = localTrack
 		}
@@ -101,9 +103,13 @@ func (s *Session) HandleWHEP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.registerViewerTracks(vts)
+	s.sendPLI()
 
 	viewerPC.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
 		s.logger.Info().Str("viewer_id", viewerID).Str("state", state.String()).Msg("whep: ICE state")
+		if state == webrtc.ICEConnectionStateConnected {
+			s.sendPLI()
+		}
 		if state == webrtc.ICEConnectionStateDisconnected ||
 			state == webrtc.ICEConnectionStateFailed ||
 			state == webrtc.ICEConnectionStateClosed {
@@ -145,4 +151,25 @@ func (s *Session) HandleWHEP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/sdp")
 	w.WriteHeader(http.StatusCreated)
 	_, _ = w.Write([]byte(answerSDP))
+}
+
+func (s *Session) startViewerRTCPReader(viewerID string, rtpSender *webrtc.RTPSender) {
+	go func() {
+		for {
+			packets, _, err := rtpSender.ReadRTCP()
+			if err != nil {
+				return
+			}
+
+			for _, packet := range packets {
+				switch packet.(type) {
+				case *rtcp.PictureLossIndication, *rtcp.FullIntraRequest:
+					s.logger.Debug().
+						Str("viewer_id", viewerID).
+						Msg("whep: forwarding keyframe request to publisher")
+					s.sendPLI()
+				}
+			}
+		}
+	}()
 }

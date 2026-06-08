@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pion/ice/v4"
+	"github.com/pion/rtcp"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
 	"github.com/rs/zerolog"
@@ -52,21 +53,12 @@ type viewerTrackSet struct {
 	// Packet counters for diagnostics.
 	packetsWritten atomic.Int64
 
-	videoSeqBase     uint16
-	videoTsBase      uint32
-	videoLastSeq     uint16
-	videoFirstPkt    bool
-	videoSeqWrapOff  uint32
 	videoHasKeyframe bool
 	videoIsH264      bool
+	videoLastPLI     time.Time
 	videoMu          sync.Mutex
 
-	audioSeqBase    uint16
-	audioTsBase     uint32
-	audioLastSeq    uint16
-	audioFirstPkt   bool
-	audioSeqWrapOff uint32
-	audioMu         sync.Mutex
+	audioMu sync.Mutex
 }
 
 func NewSession(cfg Config, logger zerolog.Logger) *Session {
@@ -219,42 +211,15 @@ func (s *Session) writeVideoToViewer(vts *viewerTrackSet, src *rtp.Packet, isH26
 		if isKeyframe {
 			vts.videoHasKeyframe = true
 		} else {
+			if time.Since(vts.videoLastPLI) > time.Second {
+				vts.videoLastPLI = time.Now()
+				go s.sendPLI()
+			}
 			return
 		}
 	}
 
-	if vts.videoFirstPkt {
-		vts.videoSeqBase = src.SequenceNumber
-		vts.videoTsBase = src.Timestamp
-		vts.videoLastSeq = 0
-		vts.videoSeqWrapOff = 0
-		vts.videoFirstPkt = false
-	}
-
-	rawSeq := src.SequenceNumber
-	diff := int32(rawSeq) - int32(vts.videoSeqBase)
-	newSeq := uint16(uint32(diff) + vts.videoSeqWrapOff)
-	if newSeq <= vts.videoLastSeq && vts.videoLastSeq > 0xC000 && newSeq < 0x4000 {
-		vts.videoSeqWrapOff += 0x10000
-		newSeq = uint16(uint32(diff) + vts.videoSeqWrapOff)
-	}
-	vts.videoLastSeq = newSeq
-	newTs := uint32(int64(src.Timestamp) - int64(vts.videoTsBase))
-
-	out := *src
-	out.SequenceNumber = newSeq
-	out.Timestamp = newTs
-	out.SSRC = 0
-
-	payload := out.Payload
-	out.Payload = nil
-	marshaled, err := out.Marshal()
-	out.Payload = payload
-	if err != nil {
-		return
-	}
-
-	if _, writeErr := vts.videoTrack.Write(marshaled); writeErr != nil {
+	if writeErr := vts.videoTrack.WriteRTP(src); writeErr != nil {
 		vts.isClosed.Store(true)
 	} else {
 		vts.packetsWritten.Add(1)
@@ -269,38 +234,7 @@ func (s *Session) writeAudioToViewer(vts *viewerTrackSet, src *rtp.Packet) {
 		return
 	}
 
-	if vts.audioFirstPkt {
-		vts.audioSeqBase = src.SequenceNumber
-		vts.audioTsBase = src.Timestamp
-		vts.audioLastSeq = 0
-		vts.audioSeqWrapOff = 0
-		vts.audioFirstPkt = false
-	}
-
-	rawSeq := src.SequenceNumber
-	diff := int32(rawSeq) - int32(vts.audioSeqBase)
-	newSeq := uint16(uint32(diff) + vts.audioSeqWrapOff)
-	if newSeq <= vts.audioLastSeq && vts.audioLastSeq > 0xC000 && newSeq < 0x4000 {
-		vts.audioSeqWrapOff += 0x10000
-		newSeq = uint16(uint32(diff) + vts.audioSeqWrapOff)
-	}
-	vts.audioLastSeq = newSeq
-	newTs := uint32(int64(src.Timestamp) - int64(vts.audioTsBase))
-
-	out := *src
-	out.SequenceNumber = newSeq
-	out.Timestamp = newTs
-	out.SSRC = 0
-
-	payload := out.Payload
-	out.Payload = nil
-	marshaled, err := out.Marshal()
-	out.Payload = payload
-	if err != nil {
-		return
-	}
-
-	if _, writeErr := vts.audioTrack.Write(marshaled); writeErr != nil {
+	if writeErr := vts.audioTrack.WriteRTP(src); writeErr != nil {
 		vts.isClosed.Store(true)
 	} else {
 		vts.packetsWritten.Add(1)
@@ -485,6 +419,31 @@ func (s *Session) iceServers() []webrtc.ICEServer {
 
 func appendCandidateToAnswer(sdp string) string {
 	return sdp + "a=end-of-candidates\r\n"
+}
+
+func (s *Session) sendPLI() {
+	s.mu.Lock()
+	publisherPC := s.publisherPC
+	packets := make([]rtcp.Packet, 0, len(s.publisherTracks))
+	for _, pt := range s.publisherTracks {
+		if pt.kind != webrtc.RTPCodecTypeVideo {
+			continue
+		}
+		if mediaSSRC := uint32(pt.track.SSRC()); mediaSSRC != 0 {
+			packets = append(packets, &rtcp.PictureLossIndication{
+				MediaSSRC: mediaSSRC,
+			})
+		}
+	}
+	s.mu.Unlock()
+
+	if publisherPC == nil || len(packets) == 0 {
+		return
+	}
+
+	if err := publisherPC.WriteRTCP(packets); err != nil {
+		s.logger.Error().Err(err).Msg("whip: failed to send PLI")
+	}
 }
 
 // --- Keyframe detection ---
