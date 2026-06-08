@@ -22,3 +22,6 @@ var siteTemplate []byte
 //
 //go:embed studio/index.html
 var studioTemplate []byte
+
+//go:embed static/test-whep.html
+var testWHEPTemplate []byte

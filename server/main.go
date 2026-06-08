@@ -59,6 +59,13 @@ func main() {
 		_, _ = w.Write([]byte("OK"))
 	})
 
+	// Debug endpoints — inspect SDP and internal state.
+	router.Get("/debug/sdp", session.HandleDebugSDP)
+	router.Get("/debug/status", session.HandleDebugStatus)
+
+	// Simple test page for WHEP connectivity.
+	router.Get("/test", session.HandleTestWHEP)
+
 	// Stream status endpoint — polled by HTMX for live/offline
 	// state and viewer count.
 	router.Get("/status", session.HandleStatus)

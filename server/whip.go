@@ -78,20 +78,32 @@ func (s *Session) handleWHIPInternal(
 		return
 	}
 
-	// When the publisher sends media tracks, store them so they
-	// can be relayed to WHEP viewers.
+	// When the publisher sends media tracks, store them and
+	// start a broadcast writer goroutine that fans out RTP
+	// packets to all connected WHEP viewers.
 	peerConnection.OnTrack(func(
 		track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver,
 	) {
 		s.logger.Info().
 			Str("track_id", track.ID()).
 			Str("kind", track.Kind().String()).
+			Str("codec", track.Codec().MimeType).
 			Str("type", pubType).
 			Msg("whip: received track from publisher")
 
+		pt := &publisherTrack{
+			track: track,
+			codec: track.Codec().RTPCodecCapability,
+			kind:  track.Kind(),
+		}
+
 		s.mu.Lock()
-		s.publisherTracks[track.ID()] = track
+		s.publisherTracks[track.ID()] = pt
 		s.mu.Unlock()
+
+		// Start the broadcast writer — one goroutine per track
+		// that reads once and fans out to all viewers.
+		s.startBroadcastWriter(pt)
 	})
 
 	// Handle ICE connection state changes for logging.
@@ -151,6 +163,11 @@ func (s *Session) handleWHIPInternal(
 		return
 	}
 
+	// Wait for ICE candidate gathering to complete before
+	// sending the answer. This ensures all candidates are
+	// included and avoids the need for trickle ICE.
+	<-webrtc.GatheringCompletePromise(peerConnection)
+
 	// Store the publisher's peer connection, type, and start time.
 	s.mu.Lock()
 	s.setPublisher(peerConnection, pubType)
@@ -158,17 +175,21 @@ func (s *Session) handleWHIPInternal(
 
 	// Return the SDP answer with WHIP-specific headers.
 	// The Location header tells WHIP clients where to send DELETE.
+	answerSDP := appendCandidateToAnswer(
+		peerConnection.LocalDescription().SDP,
+	)
+
 	w.Header().Set("Content-Type", "application/sdp")
 	w.Header().Set("Location", "/api/whip")
 	w.Header().Set("Access-Control-Expose-Headers", "Location, ETag")
 	w.WriteHeader(http.StatusCreated)
-	if _, err := w.Write([]byte(answer.SDP)); err != nil {
+	if _, err := w.Write([]byte(answerSDP)); err != nil {
 		s.logger.Error().Err(err).Msg("whip: failed to write answer SDP")
 	}
 
 	s.logger.Info().
 		Str("type", pubType).
-		Int("answer_bytes", len(answer.SDP)).
+		Int("answer_bytes", len(answerSDP)).
 		Msg("whip: publisher connected successfully")
 }
 
