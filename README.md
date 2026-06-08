@@ -2,15 +2,16 @@
 
 A self-hosted live streaming server built on Pion WebRTC.
 Publish from OBS via WHIP. Watch in any browser via WHEP.
-Single Go binary. No transcoding. Sub-500ms latency.
+Single Go binary. No transcoding. Ultra-low latency.
 
 ## Live Demo
 
 ```
-Viewer:  http://172.239.127.130
-Landing: http://172.239.127.130/site
-Health:  http://172.239.127.130/health
-Status:  http://172.239.127.130/status
+Viewer:  https://stream.talcr.com
+Landing: https://stream.talcr.com/site
+Studio:  https://stream.talcr.com/studio
+Health:  https://stream.talcr.com/health
+Status:  https://stream.talcr.com/status
 ```
 
 ## Quick Start
@@ -21,14 +22,14 @@ cd pion-stream
 ./scripts/setup.sh
 ```
 
-Then open `http://YOUR_SERVER_IP` in your browser.
+Then open `https://YOUR_SERVER_IP` in your browser.
 
 ## How to Test Live Streaming
 
 ### 1. Check the server is running
 
 ```bash
-curl http://172.239.127.130/health
+curl https://stream.talcr.com/health
 # → OK
 ```
 
@@ -36,19 +37,19 @@ curl http://172.239.127.130/health
 
 1. Open OBS Studio
 2. **Settings → Stream → Service:** Custom
-3. **Server:** `http://172.239.127.130/api/whip`
+3. **Server:** `https://stream.talcr.com/api/whip`
 4. **Stream Key:** leave blank
 5. **Settings → Output → Encoder:** x264 (H.264)
 6. Click **Start Streaming**
 
 ### 3. Watch in any browser
 
-Open `http://172.239.127.130` — the stream appears automatically.
+Open `https://stream.talcr.com` — the stream appears automatically.
 
 ### 4. Verify the status
 
 ```bash
-curl http://172.239.127.130/status
+curl https://stream.talcr.com/status
 # → {"live":true,"viewers":1}
 ```
 
@@ -63,7 +64,7 @@ Set `STREAM_KEY=mysecret` in `.env`, restart the server, then
 pass the key in OBS as the stream key or via header:
 
 ```bash
-curl -X POST http://172.239.127.130/api/whip \
+curl -X POST https://stream.talcr.com/api/whip \
   -H "Authorization: Bearer mysecret" \
   -H "Content-Type: application/sdp" \
   --data-binary @offer.sdp
@@ -73,7 +74,7 @@ curl -X POST http://172.239.127.130/api/whip \
 
 1. Open OBS Studio
 2. Settings → Stream → Service: **Custom**
-3. Server: `http://YOUR_SERVER_IP/api/whip`
+3. Server: `https://YOUR_SERVER_IP/api/whip`
 4. Stream Key: leave blank (or set `STREAM_KEY` in `.env`)
 5. Output → Encoder: **H.264** (x264)
 6. Click **Start Streaming**
@@ -86,10 +87,16 @@ See `scripts/configure-obs.md` for detailed instructions with screenshots.
 |--------|------|-------------|----------|
 | `GET` | `/` | Stream viewer UI (HTMX) | HTML |
 | `GET` | `/site` | Companion landing page | HTML |
+| `GET` | `/studio` | Browser-based broadcast studio | HTML |
+| `GET` | `/test` | Minimal WHEP connectivity test | HTML |
 | `GET` | `/health` | Health check | `200 OK` |
-| `GET` | `/status` | Stream status | `{"live":bool,"viewers":int}` |
+| `GET` | `/status` | Stream status | JSON (live, viewers, duration, packets) |
+| `GET` | `/debug/sdp` | Last WHEP SDP answer | plain text |
+| `GET` | `/debug/status` | Detailed session state | JSON |
 | `POST` | `/api/whip` | WHIP ingest (OBS → server) | SDP answer |
 | `DELETE` | `/api/whip` | Publisher disconnect | `200 OK` |
+| `POST` | `/api/whip/browser` | WHIP ingest (browser → server) | SDP answer |
+| `DELETE` | `/api/whip/browser` | Browser publisher disconnect | `200 OK` |
 | `POST` | `/api/whep` | WHEP egress (server → browser) | SDP answer |
 
 ## Configuration

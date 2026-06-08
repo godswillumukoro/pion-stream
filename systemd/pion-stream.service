@@ -5,7 +5,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=ubuntu
+User=root
 WorkingDirectory=/opt/pion-stream
 EnvironmentFile=/opt/pion-stream/.env
 ExecStart=/opt/pion-stream/streaming-server

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>pion-stream — Self-hosted WebRTC streaming server</title>
-  <meta name="description" content="A self-hosted live streaming server built on Pion WebRTC. Publish from OBS via WHIP. Watch in any browser via WHEP. Single Go binary. No transcoding. Sub-500ms latency.">
+  <meta name="description" content="A self-hosted live streaming server built on Pion WebRTC. Publish from OBS via WHIP. Watch in any browser via WHEP. Single Go binary. No transcoding. Ultra-low latency.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@700;900&display=swap" rel="stylesheet">
@@ -401,7 +401,7 @@
     <p class="hero-subtitle">
       A self-hosted live streaming server built on Pion WebRTC.
       Publish from OBS via WHIP. Watch in any browser via WHEP.
-      Single Go binary. No transcoding. Sub-500ms latency.
+      Single Go binary. No transcoding. Ultra-low latency.
     </p>
     <a href="https://github.com/godswillumukoro/pion-stream" class="hero-cta">
       VIEW ON GITHUB <span class="arrow">→</span>
@@ -558,15 +558,11 @@
 <span class="cmd">git clone</span> https://github.com/godswillumukoro/pion-stream
 <span class="cmd">cd</span> pion-stream
 
-<span class="comment"># Build and run locally</span>
-<span class="cmd">make build</span>
-<span class="cmd">./streaming-server</span>
-
-<span class="comment"># Or deploy to a VPS in one command</span>
+<span class="comment"># Run the setup script (installs Go, builds, creates service)</span>
 <span class="cmd">./scripts/setup.sh</span></code>
     </div>
     <p class="section-body" style="font-size:12px;color:var(--text-dim)">
-      Then open <code style="color:var(--accent);background:var(--surface);padding:2px 6px;font-size:11px">http://172.239.127.130</code> in your browser.
+      Then open <code style="color:var(--accent);background:var(--surface);padding:2px 6px;font-size:11px">https://stream.talcr.com</code> in your browser.
     </p>
   </div>
 </section>
@@ -597,14 +593,9 @@
           <td>80</td>
         </tr>
         <tr>
-          <td>UDP_PORT_MIN</td>
-          <td>Start of ICE UDP candidate port range</td>
+          <td>UDP_MUX_PORT</td>
+          <td>ICE UDP mux port (single port for all connections)</td>
           <td>3000</td>
-        </tr>
-        <tr>
-          <td>UDP_PORT_MAX</td>
-          <td>End of ICE UDP candidate port range</td>
-          <td>4000</td>
         </tr>
         <tr>
           <td>PUBLIC_IP</td>
@@ -701,7 +692,7 @@
 <!-- FOOTER -->
 <footer class="footer">
   <div class="container">
-    pion-stream &copy; 2025 · MIT License · Built with Go + Pion WebRTC
+    pion-stream &copy; 2026 · MIT License · Built with Go + Pion WebRTC
   </div>
 </footer>
 
