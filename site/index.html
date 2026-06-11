@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>pion-stream — Self-hosted WebRTC streaming server</title>
-  <meta name="description" content="A self-hosted live streaming server built on Pion WebRTC. Publish from OBS via WHIP. Watch in any browser via WHEP. Single Go binary. No transcoding. Ultra-low latency.">
+  <meta name="description" content="A self-hosted browser-to-browser live streaming server built on Pion WebRTC. Publish from your browser at /studio. Watch at /. Single Go binary. No transcoding. Ultra-low latency.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@700;900&display=swap" rel="stylesheet">
@@ -399,9 +399,9 @@
     <div class="hero-eyebrow">[ OPEN SOURCE / v1.0 ]</div>
     <h1 class="hero-title">pion<span>-stream</span></h1>
     <p class="hero-subtitle">
-      A self-hosted live streaming server built on Pion WebRTC.
-      Publish from OBS via WHIP. Watch in any browser via WHEP.
-      Single Go binary. No transcoding. Ultra-low latency.
+      A self-hosted browser-to-browser live streaming server.
+      Open /studio to broadcast your camera. Open / to watch.
+      No OBS required. Single Go binary. No transcoding. Ultra-low latency.
     </p>
     <a href="https://github.com/godswillumukoro/pion-stream" class="hero-cta">
       VIEW ON GITHUB <span class="arrow">→</span>
@@ -417,8 +417,8 @@
     <div class="section-body">
       <p>
         pion-stream is a self-hosted WebRTC streaming server that lets you
-        publish live video from OBS Studio and watch it in any modern browser —
-        no Twitch account, no YouTube channel, no CDN required.
+        publish live video from your browser and watch it in any other browser —
+        no OBS, no Twitch account, no YouTube channel, no CDN required.
       </p>
       <p>
         It implements the <strong>WHIP</strong> (WebRTC-HTTP Ingest Protocol)
@@ -442,7 +442,7 @@
     <h2 class="section-title">How It Works</h2>
     <div class="diagram">
       <div class="diagram-node">
-        OBS STUDIO<br><span style="font-size:9px;color:var(--text-faint)">WHIP CLIENT</span>
+        BROWSER /studio<br><span style="font-size:9px;color:var(--text-faint)">WHIP CLIENT</span>
       </div>
       <div class="diagram-arrow">── WHIP →</div>
       <div class="diagram-node highlight">
@@ -450,7 +450,7 @@
       </div>
       <div class="diagram-arrow">← WHEP ──</div>
       <div class="diagram-node">
-        BROWSER<br><span style="font-size:9px;color:var(--text-faint)">WHEP CLIENT</span>
+        BROWSER /<br><span style="font-size:9px;color:var(--text-faint)">WHEP CLIENT</span>
       </div>
     </div>
     <p class="section-body" style="text-align:center;font-size:11px;color:var(--text-faint);margin-top:8px;">
@@ -466,17 +466,18 @@
     <h2 class="section-title">Browser Studio</h2>
     <div class="section-body">
       <p>
-        <strong>Stream from your browser. No software required.</strong>
+        <strong>Stream from your browser. Nothing to install.</strong>
         The built-in browser studio lets you publish live video directly
         from Chrome or Firefox — no OBS, no downloads, no configuration.
         Open <code style="color:var(--accent);background:var(--surface);padding:2px 6px;font-size:11px">/studio</code>,
         select your camera, and click Go Live.
       </p>
       <p>
-        The studio uses the same WHIP endpoint as OBS, so viewers watching
+        The studio speaks the same WHIP protocol as OBS, so viewers watching
         at <code style="color:var(--accent);background:var(--surface);padding:2px 6px;font-size:11px">/</code>
-        see the stream instantly — regardless of whether you published from
-        a browser or OBS. One protocol, any client.
+        see the stream instantly. OBS also works at
+        <code style="color:var(--accent);background:var(--surface);padding:2px 6px;font-size:11px">/api/whip</code>
+        if you prefer a dedicated encoder. One protocol, any client.
       </p>
     </div>
 

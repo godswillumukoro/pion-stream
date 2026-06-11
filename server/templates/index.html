@@ -7,7 +7,7 @@
 <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@700;900&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0a0a0a;--surface:#141414;--border:#252525;--accent:#4af626;--red:#ff2a2a;--text:#eaeaea;--text-dim:#6b6b6b;--font-mono:'JetBrains Mono',monospace;--font-display:'Archivo',sans-serif}
+:root{--bg:#0a0a0a;--surface:#141414;--border:#252525;--accent:#4af626;--red:#ff2a2a;--text:#eaeaea;--text-dim:#6b6b6b;--font-mono:'JetBrains Mono',monospace;--font-display:'Archivo',sans-serif;--chat-self:#1a3a1a}
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:var(--font-mono);min-height:100dvh;display:flex;flex-direction:column;align-items:center}
 .frame{width:100%;max-width:1024px;min-height:100dvh;padding:32px 24px 48px;display:flex;flex-direction:column}
@@ -29,7 +29,30 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-mono);min-hei
 .stage video.active{display:block}
 .offline-msg{font-family:var(--font-mono);font-size:13px;color:var(--text-dim);letter-spacing:.05em;text-transform:uppercase;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;position:absolute;inset:0;z-index:5;justify-content:center}
 .hidden{display:none!important}
-.footer{display:flex;align-items:center;justify-content:space-between;padding-top:16px;font-size:10px;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;border-top:1px solid var(--border)}
+
+/* --- Chat --- */
+.chat-panel{margin-top:1px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;max-height:280px}
+.chat-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
+.chat-header .chat-title{color:var(--accent)}
+.chat-messages{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;font-size:11px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.chat-messages::-webkit-scrollbar{width:4px}
+.chat-messages::-webkit-scrollbar-thumb{background:var(--border)}
+.chat-msg{display:flex;gap:8px;line-height:1.5}
+.chat-msg .msg-name{color:var(--accent);font-weight:500;white-space:nowrap;min-width:0;flex-shrink:0}
+.chat-msg .msg-time{color:var(--text-dim);font-size:9px;white-space:nowrap;flex-shrink:0}
+.chat-msg .msg-text{color:var(--text);word-break:break-word}
+.chat-msg.self{background:var(--chat-self);margin:-2px -8px;padding:2px 8px;border-radius:2px}
+.chat-input-wrap{display:flex;gap:0;border-top:1px solid var(--border)}
+.chat-input-wrap input{flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:10px 14px;outline:none}
+.chat-input-wrap input::placeholder{color:var(--text-dim);opacity:.5}
+.chat-input-wrap button{background:transparent;border:none;border-left:1px solid var(--border);color:var(--accent);font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:10px 16px;cursor:pointer}
+.chat-input-wrap button:hover{background:rgba(74,246,38,.08)}
+.chat-input-wrap button:disabled{color:var(--text-dim);cursor:default}
+.chat-name-row{display:flex;align-items:center;gap:8px;padding:6px 14px;border-top:1px solid var(--border);font-size:10px;color:var(--text-dim)}
+.chat-name-row input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:10px;padding:4px 8px;width:100px;outline:none}
+.chat-name-row input:focus{border-color:var(--accent)}
+
+.footer{display:flex;align-items:center;justify-content:space-between;padding-top:16px;font-size:10px;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;border-top:1px solid var(--border);margin-top:1px}
 .footer-left{display:flex;gap:24px}
 .footer-item{display:flex;gap:8px}
 .footer-label{opacity:.5}
@@ -50,6 +73,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-mono);min-hei
 <div id="offline-msg" class="offline-msg"><span>[ AWAITING UPLINK ]</span><span class="indicator">Publish via OBS WHIP or Browser Studio</span></div>
 <div id="error-overlay" class="error-overlay hidden"></div>
 </div>
+
+<!-- CHAT PANEL -->
+<div class="chat-panel" id="chat-panel">
+<div class="chat-header"><span class="chat-title">● LIVE CHAT</span><span id="chat-status">connecting...</span></div>
+<div class="chat-messages" id="chat-messages"></div>
+<div class="chat-name-row">
+<span>NAME</span>
+<input type="text" id="chat-name" maxlength="20" placeholder="anon" value="">
+</div>
+<div class="chat-input-wrap">
+<input type="text" id="chat-input" placeholder="Type a message..." maxlength="500" disabled>
+<button id="chat-send" disabled>SEND</button>
+</div>
+</div>
+
 <div class="footer">
 <div class="footer-left">
 <div class="footer-item"><span class="footer-label">PROTOCOL</span><span>WHIP/WHEP</span></div>
@@ -130,6 +168,100 @@ async function checkStatusAndConnect(){
     }
   }catch(e){log('status check failed: '+e.message);}
 }
+
+// ====== LIVE CHAT (SSE) ======
+(function(){
+  var msgsEl=document.getElementById('chat-messages');
+  var inputEl=document.getElementById('chat-input');
+  var sendBtn=document.getElementById('chat-send');
+  var nameEl=document.getElementById('chat-name');
+  var statusEl=document.getElementById('chat-status');
+  var es=null;
+
+  // Restore saved name.
+  var savedName=localStorage.getItem('pion-chat-name')||'';
+  nameEl.value=savedName;
+  nameEl.addEventListener('change',function(){
+    localStorage.setItem('pion-chat-name',nameEl.value.trim());
+  });
+
+  function connectSSE(){
+    if(es){es.close();}
+    statusEl.textContent='connecting...';
+    es=new EventSource('/api/chat/events');
+    es.onopen=function(){
+      statusEl.textContent='live';
+      statusEl.style.color='var(--accent)';
+      inputEl.disabled=false;
+      sendBtn.disabled=false;
+    };
+    es.onmessage=function(e){
+      try{
+        var msg=JSON.parse(e.data);
+        addMessage(msg,false);
+      }catch(err){}
+    };
+    es.onerror=function(){
+      statusEl.textContent='reconnecting...';
+      statusEl.style.color='var(--text-dim)';
+      inputEl.disabled=true;
+      sendBtn.disabled=true;
+      es.close();
+      setTimeout(connectSSE,3000);
+    };
+  }
+
+  function addMessage(msg,isSelf){
+    var div=document.createElement('div');
+    div.className='chat-msg'+(isSelf?' self':'');
+    div.innerHTML='<span class="msg-time">'+esc(msg.time)+'</span><span class="msg-name">'+esc(msg.name)+'</span><span class="msg-text">'+esc(msg.text)+'</span>';
+    msgsEl.appendChild(div);
+    msgsEl.scrollTop=msgsEl.scrollHeight;
+  }
+
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+  async function sendMessage(){
+    var text=inputEl.value.trim();
+    if(!text)return;
+    var name=nameEl.value.trim()||'anon';
+    localStorage.setItem('pion-chat-name',name);
+    inputEl.value='';
+    inputEl.disabled=true;
+    sendBtn.disabled=true;
+    try{
+      var resp=await fetch('/api/chat',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name:name,text:text})
+      });
+      if(!resp.ok)throw new Error('send failed');
+    }catch(err){
+      // Message will come back via SSE if server got it.
+      // If not, show it locally optimistically.
+      var now=new Date();
+      var ts=String(now.getHours()).padStart(2,'0')+':'+
+        String(now.getMinutes()).padStart(2,'0')+':'+
+        String(now.getSeconds()).padStart(2,'0');
+      addMessage({name:name,text:text,time:ts},true);
+    }finally{
+      setTimeout(function(){
+        if(es&&es.readyState===EventSource.OPEN){
+          inputEl.disabled=false;
+          sendBtn.disabled=false;
+          inputEl.focus();
+        }
+      },200);
+    }
+  }
+
+  sendBtn.addEventListener('click',sendMessage);
+  inputEl.addEventListener('keydown',function(e){
+    if(e.key==='Enter')sendMessage();
+  });
+
+  connectSSE();
+})();
 })();
 </script>
 </body>

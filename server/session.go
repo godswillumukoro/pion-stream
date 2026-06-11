@@ -34,6 +34,9 @@ type Session struct {
 	// lastWHEPSDP stores the most recent WHEP SDP answer for debugging.
 	lastWHEPSDP atomic.Value // string
 
+	// chatHub manages the live chat message ring buffer and SSE fan-out.
+	chatHub *ChatHub
+
 	api    *webrtc.API
 	udpMux *ice.MultiUDPMuxDefault
 }
@@ -70,6 +73,7 @@ func NewSession(cfg Config, logger zerolog.Logger) *Session {
 	}
 	s.viewerSnapshot.Store([]*viewerTrackSet{})
 	s.lastWHEPSDP.Store("")
+	s.chatHub = newChatHub()
 
 	settingEngine := webrtc.SettingEngine{}
 

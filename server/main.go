@@ -70,6 +70,10 @@ func main() {
 	// state and viewer count.
 	router.Get("/status", session.HandleStatus)
 
+	// Live chat — POST to send, SSE for real-time receive.
+	router.Post("/api/chat", session.HandleChatPost)
+	router.Get("/api/chat/events", session.HandleChatEvents)
+
 	// Companion landing page — standalone documentation site.
 	router.Get("/site", session.HandleSite)
 
