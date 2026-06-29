@@ -108,7 +108,13 @@ document.body.addEventListener('htmx:afterSwap',function(e){
   var live=e.detail.target.classList.contains('live');
   log('HTMX live='+live+' wasLive='+wasLive);
   if(live&&!wasLive){wasLive=true;doConnect();}
-  else if(!live&&wasLive){wasLive=false;doDisconnect();}
+  else if(!live&&wasLive){
+    wasLive=false;
+    doDisconnect();
+    // Clear local chat messages — server resets the hub.
+    var msgsEl=document.getElementById('chat-messages');
+    if(msgsEl)msgsEl.innerHTML='';
+  }
 });
 
 checkStatusAndConnect();

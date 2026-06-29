@@ -50,11 +50,12 @@
     .controls {
       display: flex;
       flex-direction: column;
-      padding: 32px;
+      padding: 32px 32px 24px 32px;
       border-right: 1px solid var(--divider);
       background: var(--bg);
-      gap: 24px;
-      overflow-y: auto;
+      gap: 20px;
+      overflow: hidden;
+      height: 100dvh;
     }
 
     .brand {
@@ -100,7 +101,7 @@
     }
 
     /* --- Audio Meter --- */
-    .meter-section { margin-top: 4px; }
+    .meter-section { margin-top: 0; }
 
     .audio-meter {
       display: flex;
@@ -121,7 +122,7 @@
     .meter-bar.peak { background: var(--red); }
 
     /* --- Go Live Button --- */
-    .go-live-wrap { margin-top: auto; }
+    .go-live-wrap { flex-shrink: 0; }
 
     .go-live-btn {
       width: 100%;
@@ -363,27 +364,31 @@
       }
       .preview-col { min-height: 50dvh; }
       .stats-bar { gap: 16px; }
-      .studio-chat { max-height: 200px; }
+      .studio-chat { flex: 1 1 auto; max-height: none; }
     }
 
-    /* --- Chat in Studio --- */
-    .studio-chat { flex: 0 0 auto; border-top: 1px solid var(--divider); display: flex; flex-direction: column; max-height: 240px; }
-    .studio-chat .chat-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); }
+    /* --- Chat in Studio (left panel, under audio meter) --- */
+    .studio-chat { flex: 1 1 0; min-height: 0; border: 1px solid var(--divider); display: flex; flex-direction: column; }
+    .studio-chat .chat-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); flex-shrink: 0; background: var(--surface); }
     .studio-chat .chat-header .chat-title { color: var(--teal); }
-    .studio-chat .chat-messages { flex: 1; overflow-y: auto; padding: 8px 16px; display: flex; flex-direction: column; gap: 6px; font-size: 11px; min-height: 0; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+    .studio-chat .chat-messages { flex: 1 1 0; overflow-y: auto; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 11px; min-height: 0; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
     .studio-chat .chat-messages::-webkit-scrollbar { width: 4px; }
     .studio-chat .chat-messages::-webkit-scrollbar-thumb { background: var(--border); }
-    .studio-chat .chat-msg { display: flex; gap: 6px; line-height: 1.5; font-size: 11px; }
+    .studio-chat .chat-msg { display: flex; gap: 6px; line-height: 1.5; font-size: 11px; flex-shrink: 0; }
     .studio-chat .chat-msg .msg-name { color: var(--teal); font-weight: 500; white-space: nowrap; flex-shrink: 0; }
     .studio-chat .chat-msg .msg-time { color: var(--text-faint); font-size: 9px; white-space: nowrap; flex-shrink: 0; }
     .studio-chat .chat-msg .msg-text { color: var(--text-dim); word-break: break-word; }
     .studio-chat .chat-msg.self { background: rgba(45,212,191,.06); margin: -2px -8px; padding: 2px 8px; border-radius: 2px; }
-    .studio-chat .chat-input-wrap { display: flex; border-top: 1px solid var(--divider); }
-    .studio-chat .chat-input-wrap input { flex: 1; background: transparent; border: none; color: var(--text); font-family: var(--font-mono); font-size: 11px; padding: 10px 14px; outline: none; }
+    .studio-chat .chat-input-wrap { display: flex; border-top: 1px solid var(--divider); flex-shrink: 0; }
+    .studio-chat .chat-input-wrap input { flex: 1; background: transparent; border: none; color: var(--text); font-family: var(--font-mono); font-size: 11px; padding: 10px 12px; outline: none; }
     .studio-chat .chat-input-wrap input::placeholder { color: var(--text-faint); }
-    .studio-chat .chat-input-wrap button { background: transparent; border: none; border-left: 1px solid var(--divider); color: var(--teal); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 14px; cursor: pointer; }
+    .studio-chat .chat-input-wrap button { background: transparent; border: none; border-left: 1px solid var(--divider); color: var(--teal); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 12px; cursor: pointer; flex-shrink: 0; }
     .studio-chat .chat-input-wrap button:hover { background: rgba(45,212,191,.08); }
     .studio-chat .chat-input-wrap button:disabled { color: var(--text-faint); cursor: default; }
+    /* Chat name row in studio */
+    .studio-chat .chat-name-row { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-top: 1px solid var(--divider); font-size: 10px; color: var(--text-dim); flex-shrink: 0; background: var(--surface); }
+    .studio-chat .chat-name-row input { background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--font-mono); font-size: 10px; padding: 4px 8px; width: 100px; outline: none; }
+    .studio-chat .chat-name-row input:focus { border-color: var(--teal); }
   </style>
 </head>
 <body>
@@ -430,6 +435,20 @@
              autocomplete="off">
     </div>
 
+    <!-- CHAT (under audio meter) -->
+    <div class="studio-chat" id="studio-chat">
+      <div class="chat-header"><span class="chat-title">● LIVE CHAT</span><span id="chat-status" style="font-size:10px;color:var(--text-faint)">connecting...</span></div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-name-row">
+        <span>NAME</span>
+        <input type="text" id="chat-name" maxlength="20" placeholder="anon">
+      </div>
+      <div class="chat-input-wrap">
+        <input type="text" id="chat-input" placeholder="Type a message..." maxlength="500" disabled>
+        <button id="chat-send" disabled>SEND</button>
+      </div>
+    </div>
+
     <!-- Go Live -->
     <div class="go-live-wrap">
       <button class="go-live-btn" id="go-live-btn" disabled>
@@ -468,16 +487,6 @@
       <div class="stat">
         <span class="stat-label">Quality</span>
         <span class="stat-value quality" id="stat-quality">—</span>
-      </div>
-    </div>
-
-    <!-- CHAT -->
-    <div class="studio-chat" id="studio-chat">
-      <div class="chat-header"><span class="chat-title">● LIVE CHAT</span><span id="chat-status" style="font-size:10px;color:var(--text-faint)">connecting...</span></div>
-      <div class="chat-messages" id="chat-messages"></div>
-      <div class="chat-input-wrap">
-        <input type="text" id="chat-input" placeholder="Type a message..." maxlength="500" disabled>
-        <button id="chat-send" disabled>SEND</button>
       </div>
     </div>
   </div>
@@ -1113,6 +1122,9 @@ const StudioController = {
 
     this.stopStatusPolling();
 
+    // Clear chat — server resets the hub, we clear local DOM.
+    StudioChat.clearMessages();
+
     StudioUI.setButtonState('idle');
     StudioUI.setStatus('disconnected', 'Stream ended');
     StudioUI.setCornerBadge('idle');
@@ -1186,6 +1198,7 @@ const StudioController = {
 
   async endStreamSilent() {
     await WhipClient.stop();
+    StudioChat.clearMessages();
     StudioUI.setButtonState('idle');
     StudioUI.setCornerBadge('idle');
     StudioUI.hideStats();
@@ -1195,17 +1208,23 @@ const StudioController = {
 
 
 // ============================================================
-//  Live Chat (SSE) — shared with viewer page
+//  Live Chat (SSE) — in left panel, under audio meter
 // ============================================================
-(function(){
+var StudioChat = (function(){
   var msgsEl=document.getElementById('chat-messages');
   var inputEl=document.getElementById('chat-input');
   var sendBtn=document.getElementById('chat-send');
+  var nameEl=document.getElementById('chat-name');
   var statusEl=document.getElementById('chat-status');
   var es=null;
 
-  // Publisher name — use 'streamer' or saved name.
   var chatName=localStorage.getItem('pion-chat-name')||'streamer';
+  nameEl.value=chatName;
+  nameEl.addEventListener('change',function(){
+    chatName=nameEl.value.trim()||'streamer';
+    localStorage.setItem('pion-chat-name',chatName);
+  });
+  nameEl.addEventListener('keydown',function(e){e.stopPropagation();});
 
   function connectSSE(){
     if(es){es.close();}
@@ -1242,6 +1261,10 @@ const StudioController = {
   }
 
   function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+  function clearMessages(){
+    msgsEl.innerHTML='';
+  }
 
   async function sendMessage(){
     var text=inputEl.value.trim();
@@ -1280,6 +1303,8 @@ const StudioController = {
   });
 
   connectSSE();
+
+  return { clearMessages: clearMessages };
 })();
 
 // ============================================================

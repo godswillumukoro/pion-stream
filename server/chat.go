@@ -112,6 +112,26 @@ func (h *ChatHub) unsubscribe(c *chatClient) {
 	h.mu.Unlock()
 }
 
+// clear resets the ring buffer and disconnects all SSE clients.
+// Called when a stream ends so the next stream gets a fresh chat room.
+func (h *ChatHub) clear() {
+	h.mu.Lock()
+	// Disconnect all SSE clients — they will auto-reconnect and
+	// receive an empty history.
+	for c := range h.clients {
+		if !c.closed {
+			c.closed = true
+			close(c.done)
+		}
+	}
+	// Reset ring buffer.
+	h.messages = make([]ChatMessage, maxChatMessages)
+	h.head = 0
+	h.count = 0
+	h.clients = make(map[*chatClient]struct{})
+	h.mu.Unlock()
+}
+
 // HandleChatPost handles POST /api/chat.
 // Body: {"name": "...", "text": "..."}
 func (s *Session) HandleChatPost(w http.ResponseWriter, r *http.Request) {

@@ -258,6 +258,8 @@ func (s *Session) clearPublisher() {
 	s.publisherType = ""
 	s.startedAt = time.Time{}
 	s.publisherTracks = make(map[string]*publisherTrack)
+	// Start a fresh chat room for the next stream.
+	s.chatHub.clear()
 }
 
 func (s *Session) isLive() bool { return s.publisherPC != nil }
