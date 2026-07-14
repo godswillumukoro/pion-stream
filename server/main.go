@@ -121,8 +121,6 @@ func main() {
 	logger.Info().Msg("server stopped")
 }
 
-// corsMiddleware sets permissive CORS headers so that browser-based
-// WHEP clients can connect from any origin.
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
