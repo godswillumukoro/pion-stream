@@ -1,20 +1,21 @@
 # pion-stream
 
-A self-hosted browser-to-browser live streaming server built on Pion WebRTC.
-Publish from your browser at `/studio`. Watch at `/`. Single Go binary. No transcoding. Ultra-low latency.
+A self-hosted live streaming server built with Go and Pion WebRTC,
+inspired by [Broadcast Box](https://github.com/glimesh/broadcast-box).
+
+Publish from your browser or OBS via WHIP.
+Watch in any browser via WHEP.
+Single Go binary. No transcoding. Sub-500ms latency.
 
 ## Live Demo
 
 | Page | URL |
 |------|-----|
-| **Watch a stream** | `https://stream.talcr.com` |
-| **Publish from browser** | `https://stream.talcr.com/studio` |
-| **Landing / docs** | `https://stream.talcr.com/site` |
-| **WHEP connectivity test** | `https://stream.talcr.com/test` |
-| **Health check** | `https://stream.talcr.com/health` |
-| **API status (JSON)** | `https://stream.talcr.com/status` |
-| **Debug: SDP** | `https://stream.talcr.com/debug/sdp` |
-| **Debug: full state** | `https://stream.talcr.com/debug/status` |
+| Viewer | https://stream.talcr.com |
+| Studio | https://stream.talcr.com/studio |
+| Landing | https://stream.talcr.com/site |
+| Health | https://stream.talcr.com/health |
+| Status | https://stream.talcr.com/status |
 
 ## Quick Start
 
@@ -24,7 +25,7 @@ cd pion-stream
 sudo ./scripts/setup.sh
 ```
 
-Then open `https://YOUR_SERVER_IP` in your browser.
+Then open `http://YOUR_SERVER_IP` in your browser.
 
 ## How It Works
 
@@ -34,11 +35,11 @@ Browser (/studio) ──WHIP──→ pion-stream ──WHEP──→ Browser (/
                               └── RTP packet fan-out (no transcoding)
 ```
 
-1. **Publisher** opens `/studio`, selects camera + mic, clicks **Go Live**. The browser's `getUserMedia` stream is sent to the server via WHIP (WebRTC-HTTP Ingest Protocol).
+1. **Publisher** opens `/studio`, selects camera and mic, clicks **Go Live**. The browser's `getUserMedia` stream is sent to the server via WHIP (WebRTC-HTTP Ingest Protocol).
 2. **Server** receives RTP packets and fans them out to every connected viewer — no transcoding, no re-encoding.
-3. **Viewers** open `/` — HTMX polls for stream status. When live, a WHEP (WebRTC-HTTP Egress) connection is established automatically. Video appears. No page reload.
+3. **Viewers** open `/` — HTMX polls `/status` every 5 seconds for live/offline state. When live, a WHEP (WebRTC-HTTP Egress) connection is established automatically. Video appears without a page reload.
 
-### Publish from your browser — no OBS required
+### Publish from your browser
 
 Open `/studio` in Chrome or Firefox:
 
@@ -46,9 +47,9 @@ Open `/studio` in Chrome or Firefox:
 - Watch the live preview with real-time audio meter
 - Click **Go Live**
 
-The built-in studio is a full WHIP client in vanilla JavaScript — no SDK, no build step, no downloads. View-source to see how it works.
+The built-in studio is a full WHIP client in vanilla JavaScript — no SDK, no build step.
 
-### Or publish from OBS Studio
+### Publish from OBS Studio
 
 The WHIP endpoint at `/api/whip` accepts standard WHIP offers from any encoder:
 
@@ -59,23 +60,25 @@ The WHIP endpoint at `/api/whip` accepts standard WHIP offers from any encoder:
 
 Both the browser studio and OBS use the same protocol — viewers see the stream regardless of which client published it.
 
-## Server Endpoints
+## Endpoints
 
-| Method | Path | Description | Response |
-|--------|------|-------------|----------|
-| `GET` | `/` | Stream viewer UI (HTMX + WHEP) | HTML |
-| `GET` | `/studio` | Browser-based broadcast studio | HTML |
-| `GET` | `/site` | Companion landing page | HTML |
-| `GET` | `/test` | Minimal WHEP connectivity test page | HTML |
-| `GET` | `/health` | Health check | `200 OK` |
-| `GET` | `/status` | Stream status (live, viewers, duration, packets) | JSON or HTML |
-| `GET` | `/debug/sdp` | Last WHEP SDP answer | plain text |
-| `GET` | `/debug/status` | Detailed session state (per-viewer stats) | JSON |
-| `POST` | `/api/whip` | WHIP ingest — OBS or any WHIP client | SDP answer |
-| `DELETE` | `/api/whip` | Publisher disconnect | `200 OK` |
-| `POST` | `/api/whip/browser` | WHIP ingest — browser publisher | SDP answer |
-| `DELETE` | `/api/whip/browser` | Browser publisher disconnect | `200 OK` |
-| `POST` | `/api/whep` | WHEP egress — viewer requests stream | SDP answer |
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/` | Viewer UI (HTMX + WHEP) |
+| `GET` | `/studio` | Browser broadcast studio |
+| `GET` | `/site` | Companion landing page |
+| `GET` | `/test` | WHEP connectivity test page |
+| `GET` | `/health` | Health check (`200 OK`) |
+| `GET` | `/status` | Stream status — HTML (HTMX) or JSON |
+| `GET` | `/debug/sdp` | Last WHEP SDP answer (plain text) |
+| `GET` | `/debug/status` | Detailed session state (JSON) |
+| `POST` | `/api/whip` | WHIP ingest (OBS or any WHIP client) |
+| `DELETE` | `/api/whip` | Publisher disconnect |
+| `POST` | `/api/whip/browser` | WHIP ingest (browser publisher) |
+| `DELETE` | `/api/whip/browser` | Browser publisher disconnect |
+| `POST` | `/api/whep` | WHEP egress (viewer requests stream) |
+| `POST` | `/api/chat` | Send a chat message |
+| `GET` | `/api/chat/events` | Live chat SSE stream |
 
 ## Configuration
 
@@ -96,15 +99,25 @@ All settings via environment variables (see `.env.example`):
 
 | Decision | Why |
 |----------|-----|
-| **Pure Go, no CGO** | Cross-compile from anywhere. True static binary. |
-| **ICE mux, single UDP port** | All peer connections multiplexed through one socket. One firewall rule. |
-| **Packet fan-out, no transcoding** | One read per RTP packet, N writes for N viewers. Microsecond server latency. |
-| **Embedded HTML templates** | `//go:embed` compiles all 4 pages into the binary. Single deployable artifact. |
-| **H.264 keyframe awareness** | New viewers wait for an IDR/SPS frame before receiving video. No green/garbled first frames. |
-| **PLI on viewer connect** | Each new viewer triggers a Picture Loss Indication — forces an immediate keyframe. |
-| **HTMX for status polling** | Viewer page uses HTMX to poll `/status` every 5s. WebRTC connection is vanilla JS. |
-| **Caddy reverse proxy** | Auto-HTTPS via Let's Encrypt. Go binary doesn't need to know about TLS. |
-| **Systemd service** | Native Linux process supervision. Auto-restart on crash. Logs to journald. |
+| Pure Go, no CGO | Cross-compile from anywhere. Fully static binary. |
+| ICE mux, single UDP port | All peer connections multiplexed through one socket. One firewall rule. |
+| Packet fan-out, no transcoding | One read per RTP packet, N writes for N viewers. Microsecond server latency. |
+| Embedded HTML templates | `//go:embed` compiles all pages into the binary. Single deployable artifact. |
+| H.264 keyframe awareness | New viewers wait for an IDR/SPS frame before receiving video. No garbled first frames. |
+| PLI on viewer connect | Each new viewer triggers a Picture Loss Indication to force an immediate keyframe. |
+| HTMX for status polling | Viewer page polls `/status` every 5s. WebRTC connection is vanilla JavaScript. |
+| SSE for live chat | Server-Sent Events fan out chat messages to all viewers in real time. |
+| Caddy reverse proxy | Auto-HTTPS via Let's Encrypt. Go binary doesn't need to handle TLS. |
+| Systemd service | Native Linux process supervision. Auto-restart on crash. Logs to journald. |
+
+## Live Chat
+
+The server includes a built-in live chat system:
+
+- `POST /api/chat` — send a message (`{"name": "...", "text": "..."}`)
+- `GET /api/chat/events` — SSE stream of all new messages
+- Ring buffer holds the last 100 messages; new joiners receive recent history
+- Chat room is cleared automatically when a stream ends
 
 ## Stack
 
@@ -119,16 +132,8 @@ All settings via environment variables (see `.env.example`):
 ```bash
 make build                  # Compile static binary for linux/amd64
 make run                    # Run locally with defaults
-make deploy HOST=<ip>       # Deploy to remote server via setup script
+make deploy HOST=<ip>       # Deploy to remote server via SSH
 make clean                  # Remove build artifacts
-```
-
-### Deploy with rsync (alternative)
-
-```bash
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o streaming-server ./server/
-rsync -avz --exclude '.git' . user@yourserver:/opt/pion-stream/
-ssh user@yourserver "systemctl restart pion-stream"
 ```
 
 ## Firewall Requirements
@@ -137,17 +142,13 @@ ssh user@yourserver "systemctl restart pion-stream"
 ufw allow 80/tcp      # HTTP / Caddy
 ufw allow 443/tcp     # HTTPS / Caddy
 ufw allow 3000/udp    # WebRTC ICE (single mux port)
-ufw allow 3478/tcp    # TURN (optional)
-ufw allow 3478/udp    # TURN UDP (optional)
 ```
 
-## Learn More
+## Built on
 
-- [Video walkthrough](https://youtube.com/@godswillumukoro) — build series on YouTube
-- [WebRTC for the Streamer](https://webrtcforthestreamer.com) — free WebRTC course
 - [Pion WebRTC](https://github.com/pion/webrtc) — the Go WebRTC library
-- [WHIP spec](https://www.ietf.org/archive/id/draft-ietf-wish-whip-01.txt) — IETF draft
-- [broadcast-box](https://github.com/Sean-Der/broadcast-box) — the original broadcast box reference implementation
+- [Broadcast Box](https://github.com/glimesh/broadcast-box) — the original reference implementation
+- [WebRTC for the Streamer](https://webrtcforthestreamer.com) — free WebRTC course
 
 ## License
 
