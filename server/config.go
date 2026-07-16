@@ -26,6 +26,14 @@ type Config struct {
 	// STUNServer is the STUN server URL for NAT traversal.
 	STUNServer string
 
+	// TURNServer is the TURN server URL for relay when direct
+	// UDP is blocked by firewalls or symmetric NAT.
+	TURNServer string
+
+	// TURNUser and TURNPass are credentials for the TURN server.
+	TURNUser string
+	TURNPass string
+
 	// StreamKey is an optional bearer token for WHIP publish authentication.
 	// If empty, no authentication is required.
 	StreamKey string
@@ -65,6 +73,18 @@ func LoadConfig() Config {
 
 	if v := os.Getenv("STUN_SERVER"); v != "" {
 		cfg.STUNServer = v
+	}
+
+	if v := os.Getenv("TURN_SERVER"); v != "" {
+		cfg.TURNServer = v
+	}
+
+	if v := os.Getenv("TURN_USER"); v != "" {
+		cfg.TURNUser = v
+	}
+
+	if v := os.Getenv("TURN_PASS"); v != "" {
+		cfg.TURNPass = v
 	}
 
 	if v := os.Getenv("STREAM_KEY"); v != "" {

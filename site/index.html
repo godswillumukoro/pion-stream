@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>pion-stream — Self-hosted WebRTC streaming server</title>
-  <meta name="description" content="A self-hosted live streaming server built on Pion WebRTC. Publish from OBS via WHIP. Watch in any browser via WHEP. Single Go binary. No transcoding. Sub-500ms latency.">
+  <meta name="description" content="A self-hosted browser-to-browser live streaming server built on Pion WebRTC. Publish from your browser at /studio. Watch at /. Single Go binary. No transcoding. Ultra-low latency.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@700;900&display=swap" rel="stylesheet">
@@ -399,11 +399,11 @@
     <div class="hero-eyebrow">[ OPEN SOURCE / v1.0 ]</div>
     <h1 class="hero-title">pion<span>-stream</span></h1>
     <p class="hero-subtitle">
-      A self-hosted live streaming server built on Pion WebRTC.
-      Publish from OBS via WHIP. Watch in any browser via WHEP.
-      Single Go binary. No transcoding. Sub-500ms latency.
+      A self-hosted browser-to-browser live streaming server.
+      Open /studio to broadcast your camera. Open / to watch.
+      No OBS required. Single Go binary. No transcoding. Ultra-low latency.
     </p>
-    <a href="https://github.com/godswill/pion-stream" class="hero-cta">
+    <a href="https://github.com/godswillumukoro/pion-stream" class="hero-cta">
       VIEW ON GITHUB <span class="arrow">→</span>
     </a>
   </div>
@@ -417,8 +417,8 @@
     <div class="section-body">
       <p>
         pion-stream is a self-hosted WebRTC streaming server that lets you
-        publish live video from OBS Studio and watch it in any modern browser —
-        no Twitch account, no YouTube channel, no CDN required.
+        publish live video from your browser and watch it in any other browser —
+        no OBS, no Twitch account, no YouTube channel, no CDN required.
       </p>
       <p>
         It implements the <strong>WHIP</strong> (WebRTC-HTTP Ingest Protocol)
@@ -442,7 +442,7 @@
     <h2 class="section-title">How It Works</h2>
     <div class="diagram">
       <div class="diagram-node">
-        OBS STUDIO<br><span style="font-size:9px;color:var(--text-faint)">WHIP CLIENT</span>
+        BROWSER /studio<br><span style="font-size:9px;color:var(--text-faint)">WHIP CLIENT</span>
       </div>
       <div class="diagram-arrow">── WHIP →</div>
       <div class="diagram-node highlight">
@@ -450,7 +450,7 @@
       </div>
       <div class="diagram-arrow">← WHEP ──</div>
       <div class="diagram-node">
-        BROWSER<br><span style="font-size:9px;color:var(--text-faint)">WHEP CLIENT</span>
+        BROWSER /<br><span style="font-size:9px;color:var(--text-faint)">WHEP CLIENT</span>
       </div>
     </div>
     <p class="section-body" style="text-align:center;font-size:11px;color:var(--text-faint);margin-top:8px;">
@@ -459,25 +459,111 @@
   </div>
 </section>
 
-<!-- QUICK START -->
+<!-- BROWSER STUDIO -->
 <section class="section">
   <div class="container">
     <div class="section-label">[ 003 ]</div>
+    <h2 class="section-title">Browser Studio</h2>
+    <div class="section-body">
+      <p>
+        <strong>Stream from your browser. Nothing to install.</strong>
+        The built-in browser studio lets you publish live video directly
+        from Chrome or Firefox — no OBS, no downloads, no configuration.
+        Open <code style="color:var(--accent);background:var(--surface);padding:2px 6px;font-size:11px">/studio</code>,
+        select your camera, and click Go Live.
+      </p>
+      <p>
+        The studio speaks the same WHIP protocol as OBS, so viewers watching
+        at <code style="color:var(--accent);background:var(--surface);padding:2px 6px;font-size:11px">/</code>
+        see the stream instantly. OBS also works at
+        <code style="color:var(--accent);background:var(--surface);padding:2px 6px;font-size:11px">/api/whip</code>
+        if you prefer a dedicated encoder. One protocol, any client.
+      </p>
+    </div>
+
+    <!-- SVG mockup -->
+    <div style="display:flex;gap:1px;margin:24px 0;border:1px solid var(--border);">
+      <div style="flex:1;background:var(--surface);padding:20px;font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;">
+        ◉ CAMERA SELECT<br>
+        ◉ MIC SELECT<br>
+        ◉ AUDIO METER ▂▃▅▇<br>
+        <span style="display:block;margin-top:16px;padding:10px;border:2px solid #f5a623;text-align:center;color:#f5a623;font-family:var(--font-display);font-size:16px;letter-spacing:2px;">GO LIVE</span>
+        <span style="display:block;margin-top:6px;text-align:center;">Status: ready</span>
+      </div>
+      <div style="flex:2;background:var(--bg);padding:20px;text-align:center;color:var(--text-faint);font-size:10px;text-transform:uppercase;display:flex;align-items:center;justify-content:center;">
+        <span>PREVIEW · 00:00 | 0 watching</span>
+      </div>
+    </div>
+
+    <!-- Collapsed code block -->
+    <details style="margin:16px 0 24px;border:1px solid var(--border);">
+      <summary style="padding:14px 16px;background:var(--surface);cursor:pointer;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);">
+        View the publisher code (40 lines of vanilla JS)
+      </summary>
+      <div class="code-block" style="margin:0;border:none;border-top:1px solid var(--border);">
+        <code><span class="comment">// WhipClient.start() — publish a MediaStream via WHIP</span>
+<span class="cmd">async</span> <span class="comment">start</span>(stream, streamKey) {
+  <span class="comment">// 1. Create peer connection with STUN server</span>
+  <span class="cmd">this</span>.pc = <span class="cmd">new</span> RTCPeerConnection({
+    iceServers: [{ urls: <span class="cmd">'stun:stun.l.google.com:19302'</span> }]
+  });
+
+  <span class="comment">// 2. Add local tracks</span>
+  stream.getTracks().forEach(track => {
+    <span class="cmd">this</span>.pc.addTrack(track, stream);
+  });
+
+  <span class="comment">// 3. Create SDP offer</span>
+  <span class="cmd">const</span> offer = <span class="cmd">await</span> <span class="cmd">this</span>.pc.createOffer();
+  <span class="cmd">await</span> <span class="cmd">this</span>.pc.setLocalDescription(offer);
+
+  <span class="comment">// 4. Wait for ICE gathering</span>
+  <span class="cmd">await new</span> Promise(resolve => {
+    <span class="cmd">if</span> (<span class="cmd">this</span>.pc.iceGatheringState === <span class="cmd">'complete'</span>) resolve();
+    <span class="cmd">else this</span>.pc.addEventListener(
+      <span class="cmd">'icegatheringstatechange'</span>, () => resolve());
+  });
+
+  <span class="comment">// 5. POST offer to WHIP endpoint</span>
+  <span class="cmd">const</span> resp = <span class="cmd">await</span> fetch(<span class="cmd">'/api/whip/browser'</span>, {
+    method: <span class="cmd">'POST'</span>,
+    headers: { <span class="cmd">'Content-Type'</span>: <span class="cmd">'application/sdp'</span> },
+    body: <span class="cmd">this</span>.pc.localDescription.sdp
+  });
+
+  <span class="comment">// 6. Set remote answer</span>
+  <span class="cmd">const</span> answerSDP = <span class="cmd">await</span> resp.text();
+  <span class="cmd">await this</span>.pc.setRemoteDescription(
+    <span class="cmd">new</span> RTCSessionDescription({
+      type: <span class="cmd">'answer'</span>, sdp: answerSDP
+    })
+  );
+}</code>
+      </div>
+    </details>
+
+    <p class="section-body" style="font-size:12px;color:var(--text-dim)">
+      Open <a href="/studio" style="color:var(--accent);">/studio</a>
+      in your browser — no installation, no configuration.
+    </p>
+  </div>
+</section>
+
+<!-- QUICK START -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">[ 004 ]</div>
     <h2 class="section-title">Quick Start</h2>
     <div class="code-block">
       <code><span class="comment"># Clone the repository</span>
-<span class="cmd">git clone</span> https://github.com/godswill/pion-stream
+<span class="cmd">git clone</span> https://github.com/godswillumukoro/pion-stream
 <span class="cmd">cd</span> pion-stream
 
-<span class="comment"># Build and run locally</span>
-<span class="cmd">make build</span>
-<span class="cmd">./streaming-server</span>
-
-<span class="comment"># Or deploy to a VPS in one command</span>
+<span class="comment"># Run the setup script (installs Go, builds, creates service)</span>
 <span class="cmd">./scripts/setup.sh</span></code>
     </div>
     <p class="section-body" style="font-size:12px;color:var(--text-dim)">
-      Then open <code style="color:var(--accent);background:var(--surface);padding:2px 6px;font-size:11px">http://172.239.127.130</code> in your browser.
+      Then open <code style="color:var(--accent);background:var(--surface);padding:2px 6px;font-size:11px">https://stream.talcr.com</code> in your browser.
     </p>
   </div>
 </section>
@@ -485,7 +571,7 @@
 <!-- CONFIGURATION -->
 <section class="section">
   <div class="container">
-    <div class="section-label">[ 004 ]</div>
+    <div class="section-label">[ 005 ]</div>
     <h2 class="section-title">Configuration</h2>
     <p class="section-body" style="margin-bottom:16px;">
       All settings are configured via environment variables. Copy
@@ -508,14 +594,9 @@
           <td>80</td>
         </tr>
         <tr>
-          <td>UDP_PORT_MIN</td>
-          <td>Start of ICE UDP candidate port range</td>
+          <td>UDP_MUX_PORT</td>
+          <td>ICE UDP mux port (single port for all connections)</td>
           <td>3000</td>
-        </tr>
-        <tr>
-          <td>UDP_PORT_MAX</td>
-          <td>End of ICE UDP candidate port range</td>
-          <td>4000</td>
         </tr>
         <tr>
           <td>PUBLIC_IP</td>
@@ -540,7 +621,7 @@
 <!-- STACK -->
 <section class="section">
   <div class="container">
-    <div class="section-label">[ 005 ]</div>
+    <div class="section-label">[ 006 ]</div>
     <h2 class="section-title">Stack</h2>
     <div class="stack-grid">
       <div class="stack-item">
@@ -582,7 +663,7 @@
 <!-- ABOUT -->
 <section class="section">
   <div class="container">
-    <div class="section-label">[ 006 ]</div>
+    <div class="section-label">[ 007 ]</div>
     <h2 class="section-title">About</h2>
     <div class="section-body">
       <p>
@@ -599,7 +680,7 @@
       </div>
       <div class="about-card">
         <div class="about-card-label">CODE</div>
-        <a href="https://github.com/godswill/pion-stream">GitHub →</a>
+        <a href="https://github.com/godswillumukoro/pion-stream">GitHub →</a>
       </div>
       <div class="about-card">
         <div class="about-card-label">LEARN</div>
@@ -612,7 +693,7 @@
 <!-- FOOTER -->
 <footer class="footer">
   <div class="container">
-    pion-stream &copy; 2025 · MIT License · Built with Go + Pion WebRTC
+    pion-stream &copy; 2026 · MIT License · Built with Go + Pion WebRTC
   </div>
 </footer>
 

@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-REPO_URL="https://github.com/godswill/pion-stream"
+REPO_URL="https://github.com/godswillumukoro/pion-stream"
 INSTALL_DIR="/opt/pion-stream"
 GO_VERSION="1.22.0"
 SERVICE_NAME="pion-stream"

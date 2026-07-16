@@ -44,6 +44,11 @@ func main() {
 	router.Post("/api/whip", session.HandleWHIP)
 	router.Delete("/api/whip", session.HandleWHIPDisconnect)
 
+	// WHIP ingest for browser publishers — separate route for
+	// clarity in educational content.
+	router.Post("/api/whip/browser", session.HandleWHIPBrowser)
+	router.Delete("/api/whip/browser", session.HandleWHIPDelete)
+
 	// WHEP egress endpoint — browser-based viewers request the
 	// stream by POSTing their SDP offer.
 	router.Post("/api/whep", session.HandleWHEP)
@@ -54,12 +59,26 @@ func main() {
 		_, _ = w.Write([]byte("OK"))
 	})
 
+	// Debug endpoints — inspect SDP and internal state.
+	router.Get("/debug/sdp", session.HandleDebugSDP)
+	router.Get("/debug/status", session.HandleDebugStatus)
+
+	// Simple test page for WHEP connectivity.
+	router.Get("/test", session.HandleTestWHEP)
+
 	// Stream status endpoint — polled by HTMX for live/offline
 	// state and viewer count.
 	router.Get("/status", session.HandleStatus)
 
+	// Live chat — POST to send, SSE for real-time receive.
+	router.Post("/api/chat", session.HandleChatPost)
+	router.Get("/api/chat/events", session.HandleChatEvents)
+
 	// Companion landing page — standalone documentation site.
 	router.Get("/site", session.HandleSite)
+
+	// Browser studio — publish directly from the browser.
+	router.Get("/studio", session.HandleStudio)
 
 	// Viewer UI served at root with embedded HTML template.
 	router.Get("/", session.HandleViewer)
@@ -102,8 +121,6 @@ func main() {
 	logger.Info().Msg("server stopped")
 }
 
-// corsMiddleware sets permissive CORS headers so that browser-based
-// WHEP clients can connect from any origin.
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")

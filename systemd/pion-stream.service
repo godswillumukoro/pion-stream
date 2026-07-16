@@ -1,11 +1,11 @@
 [Unit]
 Description=Pion WebRTC Streaming Server
-Documentation=https://github.com/godswill/pion-stream
+Documentation=https://github.com/godswillumukoro/pion-stream
 After=network.target
 
 [Service]
 Type=simple
-User=ubuntu
+User=root
 WorkingDirectory=/opt/pion-stream
 EnvironmentFile=/opt/pion-stream/.env
 ExecStart=/opt/pion-stream/streaming-server

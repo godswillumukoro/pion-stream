@@ -1,412 +1,274 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>pion-stream — LIVE VIEWER</title>
-  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@700;900&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #0a0a0a;
-      --surface: #141414;
-      --border: #252525;
-      --accent: #4af626;
-      --accent-dim: rgba(74, 246, 38, 0.08);
-      --red: #ff2a2a;
-      --red-dim: rgba(255, 42, 42, 0.12);
-      --text: #eaeaea;
-      --text-dim: #6b6b6b;
-      --font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', monospace;
-      --font-display: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pion-stream — LIVE VIEWER</title>
+<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0a;--surface:#141414;--border:#252525;--accent:#4af626;--red:#ff2a2a;--text:#eaeaea;--text-dim:#6b6b6b;--font-mono:'JetBrains Mono',monospace;--font-display:'Archivo',sans-serif;--chat-self:#1a3a1a}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-mono);min-height:100dvh;display:flex;flex-direction:column;align-items:center}
+.frame{width:100%;max-width:1024px;min-height:100dvh;padding:32px 24px 48px;display:flex;flex-direction:column}
+.header{display:flex;align-items:center;justify-content:space-between;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.brand{font-family:var(--font-display);font-weight:900;font-size:20px;letter-spacing:-.5px;text-transform:uppercase}
+.brand-accent{color:var(--accent)}
+.header-right{display:flex;align-items:center;gap:16px}
+.badge{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;padding:6px 14px;border:1px solid var(--border);background:var(--surface)}
+.badge-dot{width:6px;height:6px;background:var(--text-dim)}
+#status-badge.live .badge-dot{background:var(--red);box-shadow:0 0 6px var(--red);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+#status-badge.live{border-color:rgba(255,42,42,.4)}
+.badge-label.offline{color:var(--text-dim)}
+.badge-label.live{color:var(--red)}
+.viewers{font-size:11px;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;padding:6px 14px;border:1px solid var(--border);background:var(--surface)}
+.stage{flex:1;margin-top:1px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;min-height:400px}
+.video-wrap{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.stage video{width:100%;height:100%;object-fit:contain;background:#000;display:none}
+.stage video.active{display:block}
+.offline-msg{font-family:var(--font-mono);font-size:13px;color:var(--text-dim);letter-spacing:.05em;text-transform:uppercase;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;position:absolute;inset:0;z-index:5;justify-content:center}
+.hidden{display:none!important}
 
-    *, *::before, *::after {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+/* --- Chat --- */
+.chat-panel{margin-top:1px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;max-height:280px}
+.chat-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
+.chat-header .chat-title{color:var(--accent)}
+.chat-messages{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;font-size:11px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.chat-messages::-webkit-scrollbar{width:4px}
+.chat-messages::-webkit-scrollbar-thumb{background:var(--border)}
+.chat-msg{display:flex;gap:8px;line-height:1.5}
+.chat-msg .msg-name{color:var(--accent);font-weight:500;white-space:nowrap;min-width:0;flex-shrink:0}
+.chat-msg .msg-time{color:var(--text-dim);font-size:9px;white-space:nowrap;flex-shrink:0}
+.chat-msg .msg-text{color:var(--text);word-break:break-word}
+.chat-msg.self{background:var(--chat-self);margin:-2px -8px;padding:2px 8px;border-radius:2px}
+.chat-input-wrap{display:flex;gap:0;border-top:1px solid var(--border)}
+.chat-input-wrap input{flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:10px 14px;outline:none}
+.chat-input-wrap input::placeholder{color:var(--text-dim);opacity:.5}
+.chat-input-wrap button{background:transparent;border:none;border-left:1px solid var(--border);color:var(--accent);font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:10px 16px;cursor:pointer}
+.chat-input-wrap button:hover{background:rgba(74,246,38,.08)}
+.chat-input-wrap button:disabled{color:var(--text-dim);cursor:default}
+.chat-name-row{display:flex;align-items:center;gap:8px;padding:6px 14px;border-top:1px solid var(--border);font-size:10px;color:var(--text-dim)}
+.chat-name-row input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:10px;padding:4px 8px;width:100px;outline:none}
+.chat-name-row input:focus{border-color:var(--accent)}
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-mono);
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      /* CRT scanline overlay */
-      background-image:
-        repeating-linear-gradient(
-          0deg,
-          transparent,
-          transparent 2px,
-          rgba(0, 0, 0, 0.03) 2px,
-          rgba(0, 0, 0, 0.03) 4px
-        );
-    }
-
-    /* --- Frame --- */
-    .frame {
-      width: 100%;
-      max-width: 1024px;
-      min-height: 100dvh;
-      padding: 32px 24px 48px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* --- Header Bar --- */
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .brand {
-      font-family: var(--font-display);
-      font-weight: 900;
-      font-size: 20px;
-      letter-spacing: -0.5px;
-      text-transform: uppercase;
-      color: var(--text);
-    }
-
-    .brand-accent {
-      color: var(--accent);
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    /* --- Status Badge --- */
-    .badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      padding: 6px 14px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-    }
-
-    .badge-dot {
-      width: 6px;
-      height: 6px;
-      background: var(--text-dim);
-    }
-
-    #status-badge.live .badge-dot {
-      background: var(--red);
-      box-shadow: 0 0 6px var(--red);
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    #status-badge.live {
-      border-color: rgba(255, 42, 42, 0.4);
-    }
-
-    .badge-label.offline { color: var(--text-dim); }
-    .badge-label.live { color: var(--red); }
-
-    /* --- Viewers --- */
-    .viewers {
-      font-size: 11px;
-      color: var(--text-dim);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      padding: 6px 14px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-    }
-
-    /* --- Video Stage --- */
-    .stage {
-      flex: 1;
-      margin-top: 1px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      overflow: hidden;
-      min-height: 400px;
-    }
-
-    video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      display: none;
-    }
-
-    video.active {
-      display: block;
-    }
-
-    /* Crosshair corners on video stage */
-    .stage::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 2;
-      background:
-        linear-gradient(to right, var(--border) 1px, transparent 1px) 0 0 / 32px 1px no-repeat,
-        linear-gradient(to bottom, var(--border) 1px, transparent 1px) 0 0 / 1px 32px no-repeat,
-        linear-gradient(to left, var(--border) 1px, transparent 1px) 100% 0 / 32px 1px no-repeat,
-        linear-gradient(to bottom, var(--border) 1px, transparent 1px) 100% 0 / 1px 32px no-repeat,
-        linear-gradient(to right, var(--border) 1px, transparent 1px) 0 100% / 32px 1px no-repeat,
-        linear-gradient(to top, var(--border) 1px, transparent 1px) 0 100% / 1px 32px no-repeat,
-        linear-gradient(to left, var(--border) 1px, transparent 1px) 100% 100% / 32px 1px no-repeat,
-        linear-gradient(to top, var(--border) 1px, transparent 1px) 100% 100% / 1px 32px no-repeat;
-    }
-
-    .offline-msg {
-      font-family: var(--font-mono);
-      font-size: 13px;
-      color: var(--text-dim);
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      align-items: center;
-      padding: 48px;
-    }
-
-    .offline-msg .indicator {
-      font-size: 10px;
-      color: var(--text-dim);
-      opacity: 0.5;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    /* --- Footer --- */
-    .footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-top: 16px;
-      font-size: 10px;
-      color: var(--text-dim);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      border-top: 1px solid var(--border);
-    }
-
-    .footer-left {
-      display: flex;
-      gap: 24px;
-    }
-
-    .footer-item {
-      display: flex;
-      gap: 8px;
-    }
-
-    .footer-label {
-      opacity: 0.5;
-    }
-
-    /* --- Error state --- */
-    .error-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(10, 10, 10, 0.92);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
-      font-size: 12px;
-      color: var(--red);
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      padding: 24px;
-      text-align: center;
-    }
-  </style>
+.footer{display:flex;align-items:center;justify-content:space-between;padding-top:16px;font-size:10px;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;border-top:1px solid var(--border);margin-top:1px}
+.footer-left{display:flex;gap:24px}
+.footer-item{display:flex;gap:8px}
+.footer-label{opacity:.5}
+.error-overlay{position:absolute;inset:0;background:rgba(10,10,10,.92);display:flex;align-items:center;justify-content:center;z-index:10;font-size:12px;color:var(--red);letter-spacing:.05em;text-transform:uppercase;padding:24px;text-align:center}
+</style>
 </head>
 <body>
 <div class="frame">
-
-  <!-- HEADER -->
-  <div class="header">
-    <div class="brand">pion<span class="brand-accent">-stream</span></div>
-
-    <div class="header-right">
-      <!-- Status badge — polled by HTMX every 5s -->
-      <span id="status-badge" class="badge"
-           hx-get="/status"
-           hx-trigger="load, every 5s"
-           hx-swap="outerHTML">
-        <span class="badge-dot"></span>
-        <span class="badge-label offline">OFFLINE</span>
-      </span>
-
-      <!-- Viewer count — updated OOB via status badge response -->
-      <span id="viewer-count" class="viewers">
-        &mdash;
-      </span>
-    </div>
-  </div>
-
-  <!-- VIDEO STAGE -->
-  <div class="stage" id="stage">
-    <div id="offline-msg" class="offline-msg">
-      <span>[ AWAITING UPLINK ]</span>
-      <span class="indicator">Publish from OBS via WHIP to activate stream</span>
-    </div>
-    <video id="stream-video" autoplay playsinline muted></video>
-    <div id="error-overlay" class="error-overlay hidden"></div>
-  </div>
-
-  <!-- FOOTER -->
-  <div class="footer">
-    <div class="footer-left">
-      <div class="footer-item">
-        <span class="footer-label">PROTOCOL</span>
-        <span>WHIP/WHEP</span>
-      </div>
-      <div class="footer-item">
-        <span class="footer-label">ENGINE</span>
-        <span>PION v4</span>
-      </div>
-    </div>
-    <div id="footer-status" class="footer-item">
-      <span class="footer-label">UPLINK</span>
-      <span>NO CARRIER</span>
-    </div>
-  </div>
-
+<div class="header">
+<div class="brand">pion<span class="brand-accent">-stream</span></div>
+<div class="header-right">
+<span id="status-badge" class="badge" hx-get="/status" hx-trigger="load, every 5s" hx-swap="outerHTML"><span class="badge-dot"></span><span class="badge-label offline">OFFLINE</span></span>
+<span id="viewer-count" class="viewers">&mdash;</span>
+</div>
+</div>
+<div class="stage" id="stage">
+<div class="video-wrap"><video id="stream-video" autoplay playsinline muted controls></video></div>
+<div id="offline-msg" class="offline-msg"><span>[ AWAITING UPLINK ]</span><span class="indicator">Publish via OBS WHIP or Browser Studio</span></div>
+<div id="error-overlay" class="error-overlay hidden"></div>
 </div>
 
+<!-- CHAT PANEL -->
+<div class="chat-panel" id="chat-panel">
+<div class="chat-header"><span class="chat-title">● LIVE CHAT</span><span id="chat-status">connecting...</span></div>
+<div class="chat-messages" id="chat-messages"></div>
+<div class="chat-name-row">
+<span>NAME</span>
+<input type="text" id="chat-name" maxlength="20" placeholder="anon" value="">
+</div>
+<div class="chat-input-wrap">
+<input type="text" id="chat-input" placeholder="Type a message..." maxlength="500" disabled>
+<button id="chat-send" disabled>SEND</button>
+</div>
+</div>
+
+<div class="footer">
+<div class="footer-left">
+<div class="footer-item"><span class="footer-label">PROTOCOL</span><span>WHIP/WHEP</span></div>
+<div class="footer-item"><span class="footer-label">ENGINE</span><span>PION v4</span></div>
+</div>
+<div id="footer-status" class="footer-item"><span class="footer-label">UPLINK</span><span>NO CARRIER</span></div>
+</div>
+</div>
 <script>
-// WHEP client — connects to the server when a stream goes live.
-// This script manages the WebRTC peer connection lifecycle for
-// browser-based playback.
+(function(){
+var pc=null, video=document.getElementById('stream-video'),
+    offline=document.getElementById('offline-msg'),
+    errEl=document.getElementById('error-overlay'), wasLive=false;
+function log(m){console.log('[viewer]',m)}
 
-let peerConnection = null;
-let videoElement = document.getElementById('stream-video');
-let offlineMsg = document.getElementById('offline-msg');
-let errorOverlay = document.getElementById('error-overlay');
-let wasLive = false;
-
-// Listen for HTMX after-swap events on the status badge to detect
-// live/offline transitions without polling separately.
-document.body.addEventListener('htmx:afterSwap', function(evt) {
-  if (evt.detail.target.id !== 'status-badge') return;
-
-  const isLive = evt.detail.target.classList.contains('live');
-
-  if (isLive && !wasLive) {
-    wasLive = true;
-    connectWHEP();
-  } else if (!isLive && wasLive) {
-    wasLive = false;
-    disconnectWHEP();
+document.body.addEventListener('htmx:afterSwap',function(e){
+  if(e.detail.target.id!=='status-badge')return;
+  var live=e.detail.target.classList.contains('live');
+  log('HTMX live='+live+' wasLive='+wasLive);
+  if(live&&!wasLive){wasLive=true;doConnect();}
+  else if(!live&&wasLive){
+    wasLive=false;
+    doDisconnect();
+    // Clear local chat messages — server resets the hub.
+    var msgsEl=document.getElementById('chat-messages');
+    if(msgsEl)msgsEl.innerHTML='';
   }
 });
 
-async function connectWHEP() {
-  try {
-    // Create a WebRTC peer connection for receiving the stream.
-    peerConnection = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-    });
+checkStatusAndConnect();
 
-    // When remote tracks arrive, attach them to the video element.
-    peerConnection.ontrack = function(event) {
-      if (event.streams && event.streams[0]) {
-        videoElement.srcObject = event.streams[0];
-        videoElement.classList.add('active');
-        offlineMsg.classList.add('hidden');
-        hideError();
+async function doConnect(){
+  if(pc)return;
+  log('connect start');
+  try{
+    pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+    var ms=null;
+    pc.ontrack=function(e){
+      log('ONTRACK '+e.track.kind+' streams='+e.streams.length);
+      if(e.streams&&e.streams[0])ms=e.streams[0];
+      else{if(!ms)ms=new MediaStream();ms.addTrack(e.track);}
+      video.srcObject=ms;
+      video.classList.add('active');
+      offline.classList.add('hidden');
+      errEl.classList.add('hidden');
+      video.play().catch(function(playErr){
+        log('play blocked: '+playErr.message);
+      });
+      log('srcObject set, video.readyState='+video.readyState);
+    };
+    pc.oniceconnectionstatechange=function(){
+      log('ICE:'+pc.iceConnectionState);
+      if(pc&&(pc.iceConnectionState==='failed'||pc.iceConnectionState==='disconnected')){
+        errEl.textContent='[ SIGNAL LOST ]';errEl.classList.remove('hidden');
       }
     };
-
-    // Handle connection failures.
-    peerConnection.oniceconnectionstatechange = function() {
-      if (peerConnection &&
-          (peerConnection.iceConnectionState === 'failed' ||
-           peerConnection.iceConnectionState === 'disconnected')) {
-        showError('SIGNAL LOST');
-      }
-    };
-
-    // Add transceivers for audio and video so the browser
-    // includes them in the SDP offer.
-    peerConnection.addTransceiver('video', { direction: 'recvonly' });
-    peerConnection.addTransceiver('audio', { direction: 'recvonly' });
-
-    // Create an SDP offer and send it to the WHEP endpoint.
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
-
-    const response = await fetch('/api/whep', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/sdp' },
-      body: peerConnection.localDescription.sdp
-    });
-
-    if (!response.ok) {
-      throw new Error('WHEP request failed: ' + response.status);
+    pc.addTransceiver('video',{direction:'recvonly'});
+    pc.addTransceiver('audio',{direction:'recvonly'});
+    var offer=await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    var resp=await fetch('/api/whep',{method:'POST',headers:{'Content-Type':'application/sdp'},body:pc.localDescription.sdp});
+    log('WHEP '+resp.status);
+    if(!resp.ok)throw new Error('WHEP '+resp.status);
+    await pc.setRemoteDescription({type:'answer',sdp:await resp.text()});
+    log('connected');
+  }catch(e){log('ERR:'+e.message);wasLive=false;doDisconnect();}
+}
+function doDisconnect(){
+  log('disconnect');
+  if(pc){pc.close();pc=null;}
+  video.srcObject=null;
+  video.classList.remove('active');
+  offline.classList.remove('hidden');
+  errEl.classList.add('hidden');
+}
+async function checkStatusAndConnect(){
+  try{
+    var resp=await fetch('/status');
+    if(!resp.ok)return;
+    var status=await resp.json();
+    if(status.live&&!wasLive){
+      wasLive=true;
+      doConnect();
     }
+  }catch(e){log('status check failed: '+e.message);}
+}
 
-    // Set the server's SDP answer as the remote description.
-    const answerSDP = await response.text();
-    await peerConnection.setRemoteDescription(
-      new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
-    );
+// ====== LIVE CHAT (SSE) ======
+(function(){
+  var msgsEl=document.getElementById('chat-messages');
+  var inputEl=document.getElementById('chat-input');
+  var sendBtn=document.getElementById('chat-send');
+  var nameEl=document.getElementById('chat-name');
+  var statusEl=document.getElementById('chat-status');
+  var es=null;
 
-    console.log('[pion-stream] WHEP connection established');
-  } catch (err) {
-    console.error('[pion-stream] WHEP connection failed:', err);
-    showError('CONNECTION FAILED');
-    disconnectWHEP();
+  // Restore saved name.
+  var savedName=localStorage.getItem('pion-chat-name')||'';
+  nameEl.value=savedName;
+  nameEl.addEventListener('change',function(){
+    localStorage.setItem('pion-chat-name',nameEl.value.trim());
+  });
+
+  function connectSSE(){
+    if(es){es.close();}
+    statusEl.textContent='connecting...';
+    es=new EventSource('/api/chat/events');
+    es.onopen=function(){
+      statusEl.textContent='live';
+      statusEl.style.color='var(--accent)';
+      inputEl.disabled=false;
+      sendBtn.disabled=false;
+    };
+    es.onmessage=function(e){
+      try{
+        var msg=JSON.parse(e.data);
+        addMessage(msg,false);
+      }catch(err){}
+    };
+    es.onerror=function(){
+      statusEl.textContent='reconnecting...';
+      statusEl.style.color='var(--text-dim)';
+      inputEl.disabled=true;
+      sendBtn.disabled=true;
+      es.close();
+      setTimeout(connectSSE,3000);
+    };
   }
-}
 
-function disconnectWHEP() {
-  if (peerConnection) {
-    peerConnection.close();
-    peerConnection = null;
+  function addMessage(msg,isSelf){
+    var div=document.createElement('div');
+    div.className='chat-msg'+(isSelf?' self':'');
+    div.innerHTML='<span class="msg-time">'+esc(msg.time)+'</span><span class="msg-name">'+esc(msg.name)+'</span><span class="msg-text">'+esc(msg.text)+'</span>';
+    msgsEl.appendChild(div);
+    msgsEl.scrollTop=msgsEl.scrollHeight;
   }
-  videoElement.srcObject = null;
-  videoElement.classList.remove('active');
-  offlineMsg.classList.remove('hidden');
-  hideError();
-}
 
-function showError(msg) {
-  errorOverlay.textContent = '[ ' + msg + ' ]';
-  errorOverlay.classList.remove('hidden');
-}
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-function hideError() {
-  errorOverlay.classList.add('hidden');
-}
+  async function sendMessage(){
+    var text=inputEl.value.trim();
+    if(!text)return;
+    var name=nameEl.value.trim()||'anon';
+    localStorage.setItem('pion-chat-name',name);
+    inputEl.value='';
+    inputEl.disabled=true;
+    sendBtn.disabled=true;
+    try{
+      var resp=await fetch('/api/chat',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name:name,text:text})
+      });
+      if(!resp.ok)throw new Error('send failed');
+    }catch(err){
+      // Message will come back via SSE if server got it.
+      // If not, show it locally optimistically.
+      var now=new Date();
+      var ts=String(now.getHours()).padStart(2,'0')+':'+
+        String(now.getMinutes()).padStart(2,'0')+':'+
+        String(now.getSeconds()).padStart(2,'0');
+      addMessage({name:name,text:text,time:ts},true);
+    }finally{
+      setTimeout(function(){
+        if(es&&es.readyState===EventSource.OPEN){
+          inputEl.disabled=false;
+          sendBtn.disabled=false;
+          inputEl.focus();
+        }
+      },200);
+    }
+  }
+
+  sendBtn.addEventListener('click',sendMessage);
+  inputEl.addEventListener('keydown',function(e){
+    if(e.key==='Enter')sendMessage();
+  });
+
+  connectSSE();
+})();
+})();
 </script>
-
 </body>
 </html>

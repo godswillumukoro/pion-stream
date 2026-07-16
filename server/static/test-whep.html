@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head><title>WHEP Test</title></head>
+<body>
+<h2>WHEP Direct Test</h2>
+<div id="log" style="font-family:monospace;background:#111;color:#0f0;padding:10px;max-height:200px;overflow-y:auto"></div>
+<video id="v" autoplay playsinline muted style="width:640px;background:#000"></video>
+<script>
+const log = (msg) => {
+  const el = document.getElementById('log');
+  el.innerHTML += new Date().toISOString().slice(11,19) + ' ' + msg + '<br>';
+  console.log('[test]', msg);
+};
+
+async function test() {
+  log('Starting WHEP test...');
+  const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+
+  pc.addTransceiver('video', { direction: 'recvonly' });
+  pc.addTransceiver('audio', { direction: 'recvonly' });
+
+  pc.ontrack = (event) => {
+    log('ONTRACK: kind=' + event.track.kind + ' id=' + event.track.id + ' streams=' + event.streams.length);
+    if (event.streams[0]) {
+      document.getElementById('v').srcObject = event.streams[0];
+      log('Set srcObject from event.streams[0]');
+    } else {
+      const ms = new MediaStream([event.track]);
+      document.getElementById('v').srcObject = ms;
+      log('Created new MediaStream from track');
+    }
+  };
+
+  pc.oniceconnectionstatechange = () => log('ICE: ' + pc.iceConnectionState);
+  pc.onicegatheringstatechange = () => log('ICE gathering: ' + pc.iceGatheringState);
+  pc.onsignalingstatechange = () => log('Signaling: ' + pc.signalingState);
+
+  log('Creating offer...');
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  log('Offer created, sending to /api/whep...');
+
+  const resp = await fetch('/api/whep', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/sdp' },
+    body: pc.localDescription.sdp
+  });
+  log('WHEP response: ' + resp.status + ' ' + resp.statusText);
+  const sdp = await resp.text();
+  log('Answer SDP size: ' + sdp.length + ' bytes');
+
+  await pc.setRemoteDescription({ type: 'answer', sdp });
+  log('Remote description set. Waiting for ICE...');
+}
+test().catch(e => log('ERROR: ' + e.message));
+</script>
+</body>
+</html>
